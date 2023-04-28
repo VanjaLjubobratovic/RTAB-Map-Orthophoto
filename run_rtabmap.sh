@@ -11,3 +11,4 @@ camera_info_topic:=/camera/color/camera_info \
 approx_sync:=false \
 wait_imu_to_init:=true \
 queue_size:=100 \
+cfg:=/home/vanja/Documents/RTAB-Map/config.ini
