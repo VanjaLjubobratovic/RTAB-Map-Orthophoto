@@ -12,5 +12,5 @@ camera_info_topic:=/camera/color/camera_info \
 approx_sync:=false \
 wait_imu_to_init:=true \
 queue_size:=1000 \
-cfg:=/home/vanja/RTAB-Map-Orthophoto/rtab_config.ini \
-gui_cfg:=/home/vanja/RTAB-Map-Orthophoto/rtabmapGUI.ini
+cfg:=/home/vanja/RTAB-Map-Orthophoto/configs/rtab_config.ini \
+gui_cfg:=/home/vanja/RTAB-Map-Orthophoto/configs/rtabmapGUI.ini
