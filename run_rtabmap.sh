@@ -11,6 +11,6 @@ depth_topic:=/camera/aligned_depth_to_color/image_raw \
 camera_info_topic:=/camera/color/camera_info \
 approx_sync:=false \
 wait_imu_to_init:=true \
-queue_size:=200 \
+queue_size:=1000 \
 cfg:=/home/vanja/RTAB-Map-Orthophoto/rtab_config.ini \
 gui_cfg:=/home/vanja/RTAB-Map-Orthophoto/rtabmapGUI.ini
