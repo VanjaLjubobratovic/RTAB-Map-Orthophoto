@@ -3,8 +3,8 @@ source /opt/ros/humble/setup.bash
 
 ros2 launch rtabmap_ros rtabmap.launch.py \
 rtabmap_args:="--delete_db_on_start" \
-rviz:=false \
-rtabmapviz:=true \
+rviz:=true \
+rtabmapviz:=false \
 frame_id:=camera_link \
 rgb_topic:=/camera/color/image_raw \
 depth_topic:=/camera/aligned_depth_to_color/image_raw \
