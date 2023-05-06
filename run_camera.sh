@@ -19,4 +19,5 @@ enable_infra2:=false \
 enable_sync:=false \
 align_depth.enable:=true \
 pointcloud.enable:=false \
-initial_reset:=true
+initial_reset:=true \
+json_file_path:=/home/vanja/RTAB-Map-Orthophoto/configs/camera_config.json
