@@ -1,0 +1,3 @@
+/home/vanja/Desktop/RTAB-Map-Orthophoto/DEM/build/CMakeFiles/ply_to_dem.dir
+/home/vanja/Desktop/RTAB-Map-Orthophoto/DEM/build/CMakeFiles/edit_cache.dir
+/home/vanja/Desktop/RTAB-Map-Orthophoto/DEM/build/CMakeFiles/rebuild_cache.dir
