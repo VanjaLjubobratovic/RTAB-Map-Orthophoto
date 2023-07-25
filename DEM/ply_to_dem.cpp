@@ -89,7 +89,6 @@ int main() {
 
     //--- GENERATING DEM ---
     double grid_resolution = 0.008;
-    float idw_power = 2.0;
 
     pcl::PointXYZRGB min, max;
     pcl::getMinMax3D(*cloud_filtered, min, max);
