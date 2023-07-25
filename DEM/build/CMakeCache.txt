@@ -395,6 +395,9 @@ OPENNI_INCLUDE_DIR:PATH=/usr/include/ni
 //Path to a library.
 OPENNI_LIBRARY:FILEPATH=/usr/lib/libOpenNI.so
 
+//The directory containing a CMake configuration file for OpenCV.
+OpenCV_DIR:PATH=/usr/lib/x86_64-linux-gnu/cmake/opencv4
+
 //path to 2d headers
 PCL_2D_INCLUDE_DIR:PATH=/usr/include/pcl-1.12
 
@@ -1157,6 +1160,8 @@ FIND_PACKAGE_MESSAGE_DETAILS_LZMA:INTERNAL=[/usr/lib/x86_64-linux-gnu/liblzma.so
 FIND_PACKAGE_MESSAGE_DETAILS_MPI:INTERNAL=[TRUE][cfound components: C ][v3.1()]
 //Details about finding MPI_C
 FIND_PACKAGE_MESSAGE_DETAILS_MPI_C:INTERNAL=[/usr/lib/x86_64-linux-gnu/libmpi.so][mpi][/usr/lib/x86_64-linux-gnu/openmpi/include][TRUE][v3.1()]
+//Details about finding OpenCV
+FIND_PACKAGE_MESSAGE_DETAILS_OpenCV:INTERNAL=[/usr][v4.5.4()]
 //Details about finding OpenGL
 FIND_PACKAGE_MESSAGE_DETAILS_OpenGL:INTERNAL=[/usr/lib/x86_64-linux-gnu/libOpenGL.so][/usr/lib/x86_64-linux-gnu/libGLX.so][/usr/include][cfound components: OpenGL GLX ][v()]
 //Details about finding OpenNI

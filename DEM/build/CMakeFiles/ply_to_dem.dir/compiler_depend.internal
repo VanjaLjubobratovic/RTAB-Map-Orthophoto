@@ -182,6 +182,12 @@ CMakeFiles/ply_to_dem.dir/ply_to_dem.cpp.o
  /usr/include/c++/11/bits/ostream.tcc
  /usr/include/c++/11/istream
  /usr/include/c++/11/bits/istream.tcc
+ /usr/include/pcl-1.12/pcl/common/common.h
+ /usr/lib/gcc/x86_64-linux-gnu/11/include/xmmintrin.h
+ /usr/lib/gcc/x86_64-linux-gnu/11/include/mmintrin.h
+ /usr/lib/gcc/x86_64-linux-gnu/11/include/mm_malloc.h
+ /usr/include/c++/11/stdlib.h
+ /usr/lib/gcc/x86_64-linux-gnu/11/include/emmintrin.h
  /usr/include/pcl-1.12/pcl/point_cloud.h
  /usr/include/eigen3/Eigen/StdVector
  /usr/include/eigen3/Eigen/Core
@@ -213,11 +219,6 @@ CMakeFiles/ply_to_dem.dir/ply_to_dem.cpp.o
  /usr/include/c++/11/tr1/poly_laguerre.tcc
  /usr/include/c++/11/tr1/riemann_zeta.tcc
  /usr/include/eigen3/Eigen/src/Core/util/ConfigureVectorization.h
- /usr/lib/gcc/x86_64-linux-gnu/11/include/mmintrin.h
- /usr/lib/gcc/x86_64-linux-gnu/11/include/emmintrin.h
- /usr/lib/gcc/x86_64-linux-gnu/11/include/xmmintrin.h
- /usr/lib/gcc/x86_64-linux-gnu/11/include/mm_malloc.h
- /usr/include/c++/11/stdlib.h
  /usr/include/c++/11/complex
  /usr/include/c++/11/sstream
  /usr/include/c++/11/bits/sstream.tcc
@@ -668,6 +669,8 @@ CMakeFiles/ply_to_dem.dir/ply_to_dem.cpp.o
  /usr/include/pcl-1.12/pcl/types.h
  /usr/include/pcl-1.12/pcl/console/print.h
  /usr/include/pcl-1.12/pcl/pcl_exports.h
+ /usr/include/pcl-1.12/pcl/PointIndices.h
+ /usr/include/pcl-1.12/pcl/common/impl/common.hpp
  /usr/include/pcl-1.12/pcl/point_types.h
  /usr/include/c++/11/bitset
  /usr/include/pcl-1.12/pcl/impl/point_types.hpp
@@ -742,6 +745,8 @@ CMakeFiles/ply_to_dem.dir/ply_to_dem.cpp.o
  /usr/include/boost/mpl/aux_/has_size.hpp
  /usr/include/boost/mpl/aux_/fold_impl.hpp
  /usr/include/boost/mpl/aux_/preprocessed/gcc/fold_impl.hpp
+ /usr/include/c++/11/cfloat
+ /usr/lib/gcc/x86_64-linux-gnu/11/include/float.h
  /usr/include/pcl-1.12/pcl/io/ply_io.h
  /usr/include/pcl-1.12/pcl/io/file_io.h
  /usr/include/pcl-1.12/pcl/conversions.h
@@ -1001,8 +1006,6 @@ CMakeFiles/ply_to_dem.dir/ply_to_dem.cpp.o
  /usr/include/boost/predef/architecture/x86.h
  /usr/include/boost/predef/architecture/x86/32.h
  /usr/include/boost/predef/architecture/x86/64.h
- /usr/include/c++/11/cfloat
- /usr/lib/gcc/x86_64-linux-gnu/11/include/float.h
  /usr/include/boost/math/tools/user.hpp
  /usr/include/boost/math/special_functions/math_fwd.hpp
  /usr/include/boost/math/special_functions/detail/round_fwd.hpp
@@ -1078,7 +1081,6 @@ CMakeFiles/ply_to_dem.dir/ply_to_dem.cpp.o
  /usr/include/pcl-1.12/pcl/visualization/pcl_visualizer.h
  /usr/include/pcl-1.12/pcl/correspondence.h
  /usr/include/pcl-1.12/pcl/pcl_base.h
- /usr/include/pcl-1.12/pcl/PointIndices.h
  /usr/include/pcl-1.12/pcl/ModelCoefficients.h
  /usr/include/pcl-1.12/pcl/TextureMesh.h
  /usr/include/pcl-1.12/pcl/visualization/common/actor_map.h
@@ -1503,4 +1505,120 @@ CMakeFiles/ply_to_dem.dir/ply_to_dem.cpp.o
  /usr/include/pcl-1.12/pcl/filters/filter_indices.h
  /usr/include/pcl-1.12/pcl/filters/filter.h
  /usr/include/pcl-1.12/pcl/search/search.h
+ /usr/include/opencv4/opencv2/opencv.hpp
+ /usr/include/opencv4/opencv2/opencv_modules.hpp
+ /usr/include/opencv4/opencv2/core.hpp
+ /usr/include/opencv4/opencv2/core/cvdef.h
+ /usr/include/opencv4/opencv2/core/version.hpp
+ /usr/include/opencv4/opencv2/core/hal/interface.h
+ /usr/include/opencv4/opencv2/core/cv_cpu_dispatch.h
+ /usr/include/opencv4/opencv2/core/base.hpp
+ /usr/include/opencv4/opencv2/core/cvstd.hpp
+ /usr/include/opencv4/opencv2/core/cvstd_wrapper.hpp
+ /usr/include/opencv4/opencv2/core/neon_utils.hpp
+ /usr/include/opencv4/opencv2/core/vsx_utils.hpp
+ /usr/include/opencv4/opencv2/core/check.hpp
+ /usr/include/opencv4/opencv2/core/traits.hpp
+ /usr/include/opencv4/opencv2/core/matx.hpp
+ /usr/include/opencv4/opencv2/core/saturate.hpp
+ /usr/include/opencv4/opencv2/core/fast_math.hpp
+ /usr/include/opencv4/opencv2/core/types.hpp
+ /usr/include/opencv4/opencv2/core/mat.hpp
+ /usr/include/opencv4/opencv2/core/bufferpool.hpp
+ /usr/include/opencv4/opencv2/core/mat.inl.hpp
+ /usr/include/opencv4/opencv2/core/persistence.hpp
+ /usr/include/opencv4/opencv2/core/operations.hpp
+ /usr/include/opencv4/opencv2/core/cvstd.inl.hpp
+ /usr/include/opencv4/opencv2/core/utility.hpp
+ /usr/include/c++/11/mutex
+ /usr/include/c++/11/chrono
+ /usr/include/c++/11/ratio
+ /usr/include/c++/11/bits/parse_numbers.h
+ /usr/include/c++/11/bits/std_mutex.h
+ /usr/include/c++/11/bits/unique_lock.h
+ /usr/include/opencv4/opencv2/core/optim.hpp
+ /usr/include/opencv4/opencv2/core/ovx.hpp
+ /usr/include/opencv4/opencv2/core/cvdef.h
+ /usr/include/opencv4/opencv2/calib3d.hpp
+ /usr/include/opencv4/opencv2/features2d.hpp
+ /usr/include/opencv4/opencv2/flann/miniflann.hpp
+ /usr/include/opencv4/opencv2/flann/defines.h
+ /usr/include/opencv4/opencv2/flann/config.h
+ /usr/include/opencv4/opencv2/core/affine.hpp
+ /usr/include/opencv4/opencv2/dnn.hpp
+ /usr/include/opencv4/opencv2/dnn/dnn.hpp
+ /usr/include/opencv4/opencv2/core/async.hpp
+ /usr/include/opencv4/opencv2/dnn/version.hpp
+ /usr/include/opencv4/opencv2/dnn/dict.hpp
+ /usr/include/opencv4/opencv2/dnn/layer.hpp
+ /usr/include/opencv4/opencv2/dnn/dnn.inl.hpp
+ /usr/include/opencv4/opencv2/dnn/utils/inference_engine.hpp
+ /usr/include/opencv4/opencv2/dnn/dnn.hpp
+ /usr/include/opencv4/opencv2/flann.hpp
+ /usr/include/opencv4/opencv2/flann/flann_base.hpp
+ /usr/include/opencv4/opencv2/flann/general.h
+ /usr/include/opencv4/opencv2/flann/matrix.h
+ /usr/include/opencv4/opencv2/flann/params.h
+ /usr/include/opencv4/opencv2/flann/any.h
+ /usr/include/opencv4/opencv2/flann/defines.h
+ /usr/include/opencv4/opencv2/flann/saving.h
+ /usr/include/opencv4/opencv2/flann/nn_index.h
+ /usr/include/opencv4/opencv2/flann/result_set.h
+ /usr/include/opencv4/opencv2/flann/all_indices.h
+ /usr/include/opencv4/opencv2/flann/kdtree_index.h
+ /usr/include/opencv4/opencv2/flann/dynamic_bitset.h
+ /usr/include/opencv4/opencv2/flann/dist.h
+ /usr/include/opencv4/opencv2/flann/heap.h
+ /usr/include/opencv4/opencv2/flann/allocator.h
+ /usr/include/opencv4/opencv2/flann/random.h
+ /usr/include/opencv4/opencv2/flann/kdtree_single_index.h
+ /usr/include/opencv4/opencv2/flann/kmeans_index.h
+ /usr/include/opencv4/opencv2/flann/logger.h
+ /usr/include/opencv4/opencv2/flann/composite_index.h
+ /usr/include/opencv4/opencv2/flann/linear_index.h
+ /usr/include/opencv4/opencv2/flann/hierarchical_clustering_index.h
+ /usr/include/opencv4/opencv2/flann/lsh_index.h
+ /usr/include/opencv4/opencv2/flann/lsh_table.h
+ /usr/include/opencv4/opencv2/flann/autotuned_index.h
+ /usr/include/opencv4/opencv2/flann/ground_truth.h
+ /usr/include/opencv4/opencv2/flann/index_testing.h
+ /usr/include/opencv4/opencv2/flann/timer.h
+ /usr/include/opencv4/opencv2/flann/sampling.h
+ /usr/include/opencv4/opencv2/highgui.hpp
+ /usr/include/opencv4/opencv2/imgcodecs.hpp
+ /usr/include/opencv4/opencv2/videoio.hpp
+ /usr/include/opencv4/opencv2/imgproc.hpp
+ /usr/include/opencv4/opencv2/imgproc/segmentation.hpp
+ /usr/include/opencv4/opencv2/ml.hpp
+ /usr/include/opencv4/opencv2/ml/ml.inl.hpp
+ /usr/include/opencv4/opencv2/objdetect.hpp
+ /usr/include/opencv4/opencv2/objdetect/detection_based_tracker.hpp
+ /usr/include/opencv4/opencv2/objdetect/face.hpp
+ /usr/include/opencv4/opencv2/photo.hpp
+ /usr/include/opencv4/opencv2/stitching.hpp
+ /usr/include/opencv4/opencv2/stitching/warpers.hpp
+ /usr/include/opencv4/opencv2/stitching/detail/warpers.hpp
+ /usr/include/opencv4/opencv2/core/cuda.hpp
+ /usr/include/opencv4/opencv2/core/cuda_types.hpp
+ /usr/include/opencv4/opencv2/core/cuda.inl.hpp
+ /usr/include/opencv4/opencv2/stitching/detail/warpers_inl.hpp
+ /usr/include/opencv4/opencv2/stitching/detail/warpers.hpp
+ /usr/include/opencv4/opencv2/stitching/detail/matchers.hpp
+ /usr/include/opencv4/opencv2/stitching/detail/motion_estimators.hpp
+ /usr/include/opencv4/opencv2/stitching/detail/matchers.hpp
+ /usr/include/opencv4/opencv2/stitching/detail/util.hpp
+ /usr/include/opencv4/opencv2/stitching/detail/util_inl.hpp
+ /usr/include/c++/11/queue
+ /usr/include/c++/11/deque
+ /usr/include/c++/11/bits/stl_deque.h
+ /usr/include/c++/11/bits/deque.tcc
+ /usr/include/c++/11/bits/stl_queue.h
+ /usr/include/opencv4/opencv2/stitching/detail/camera.hpp
+ /usr/include/opencv4/opencv2/stitching/detail/exposure_compensate.hpp
+ /usr/include/opencv4/opencv2/stitching/detail/seam_finders.hpp
+ /usr/include/opencv4/opencv2/stitching/detail/blenders.hpp
+ /usr/include/opencv4/opencv2/stitching/detail/camera.hpp
+ /usr/include/opencv4/opencv2/video.hpp
+ /usr/include/opencv4/opencv2/video/tracking.hpp
+ /usr/include/opencv4/opencv2/video/background_segm.hpp
 
