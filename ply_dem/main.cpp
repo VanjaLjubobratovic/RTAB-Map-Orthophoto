@@ -82,6 +82,11 @@ int main(int, char**){
 
 
     //---VISUALIZATION OF POINTCLOUDS---
+    /*
+        Call this at the end of your code, because it will
+        block execution of code after it and closing
+        the visualizer causes a segmentation fault!
+    */
     //filtrationViz(cloud_filtered, cloud);
 
 
