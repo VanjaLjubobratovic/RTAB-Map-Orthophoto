@@ -12,7 +12,7 @@
 #include <opencv2/opencv.hpp>
 
 pcl::PointXYZRGB calculateCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud) {
-    //--- CALCULATING CENTROID ---
+    //---CALCULATING CENTROID---
     pcl::PointXYZRGB centroid(0, 0, 0, 0, 0, 0);
 
     for(const auto point : cloud->points) {
@@ -29,7 +29,7 @@ pcl::PointXYZRGB calculateCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud)
 }
 
 void filtrationViz(pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered, pcl::PointCloud<pcl::PointXYZRGB>::Ptr raw) {
-    //--- POINTCLOUD VISUALIZATION ---
+    //---POINTCLOUD VISUALIZATION---
     auto centroid = calculateCentroid(filtered);
 
     auto viewer(new pcl::visualization::PCLVisualizer("Point cloud filter vs raw"));
@@ -71,7 +71,7 @@ int main(int, char**){
         return -1;
     }
 
-    //--- FILTERING OUTLIERS ---
+    //---FILTERING OUTLIERS---
     pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
     sor.setInputCloud(cloud);
     sor.setMeanK(50); // Number of neighbors to use for mean distance estimation
@@ -80,6 +80,37 @@ int main(int, char**){
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
     sor.filter(*cloud_filtered);
 
+
     //---VISUALIZATION OF POINTCLOUDS---
-    filtrationViz(cloud_filtered, cloud);
+    //filtrationViz(cloud_filtered, cloud);
+
+
+    //---GENERATING DEM---
+    double grid_resolution = 0.008;
+
+    pcl::PointXYZRGB min, max;
+    pcl::getMinMax3D(*cloud_filtered, min, max);
+
+    int rows = ceil((max.y - min.y) / grid_resolution);
+    int cols = ceil((max.x - min.x) / grid_resolution);
+
+    cv::Mat heightmap(rows, cols, CV_32FC1, cv::Scalar::all(std::numeric_limits<float>::quiet_NaN()));
+
+    for(const auto& point : cloud_filtered->points){
+        int col = ((max.x - point.x) / grid_resolution);
+        int row = ((max.y - point.y) / grid_resolution);
+
+        if(col >= 0 && col < cols && row >= 0 && row < rows) {
+            if(isnan(heightmap.at<float>(row, col)) || point.z > heightmap.at<float>(row, col)){
+                heightmap.at<float>(row, col) = point.z;
+            }
+        }
+    }
+
+    cv::flip(heightmap, heightmap, 0); //Flip along X-axis (row and col calculation flips image)
+    cv::normalize(heightmap, heightmap, 0, 255, cv::NORM_MINMAX, CV_8UC1); //Without this a lot of points end up invisible
+    cv::imshow("Digital Elevation Model", heightmap);
+    cv::waitKey(0);
+
+    return 0;
 }
