@@ -62,9 +62,37 @@ void filtrationViz(pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered, pcl::PointCl
     }
 }
 
+void bilinearInterpolation(cv::Mat& dem) {
+    cv::Mat interpolatedDem = dem.clone();
+
+    for(int i = 0; i < dem.rows; ++i) {
+        for(int j = 0; j < dem.cols; ++j) {
+            if(std::isnan(dem.at<float>(i, j))) {
+                float sum = 0.0f;
+                int count = 0;
+
+                for(int x = i-1; x <= i+1; ++x) {
+                    for(int y = j-1; y <= j+1; ++y) {
+                        if(!std::isnan(dem.at<float>(x, y))) {
+                            sum += dem.at<float>(x, y);
+                            count++;
+                        }
+                    }
+                }
+
+                if(count > 0) {
+                    interpolatedDem.at<float>(i, j) = sum / count;
+                }
+            }
+        }
+    }
+
+    dem = interpolatedDem;
+}
+
 int main(int, char**){
     std::string plyPath = "/home/vanja/Desktop/CLOUD/room_test/cloud_nofilter.ply";
-
+    //std::string plyPath = "/home/vanja/Desktop/Robotika Projekt/cloud_kitchen.ply";
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     if(pcl::io::loadPLYFile<pcl::PointXYZRGB>(plyPath, *cloud) == -1) {
         cerr << "ERROR: Unable to load PLY file." << endl;
@@ -101,6 +129,7 @@ int main(int, char**){
 
     cv::Mat heightmap(rows, cols, CV_32FC1, cv::Scalar::all(std::numeric_limits<float>::quiet_NaN()));
 
+
     for(const auto& point : cloud_filtered->points){
         int col = ((max.x - point.x) / grid_resolution);
         int row = ((max.y - point.y) / grid_resolution);
@@ -112,10 +141,16 @@ int main(int, char**){
         }
     }
 
+    
     cv::flip(heightmap, heightmap, 0); //Flip along X-axis (row and col calculation flips image)
     cv::normalize(heightmap, heightmap, 0, 255, cv::NORM_MINMAX, CV_8UC1); //Without this a lot of points end up invisible
+
+    //---BILINEAR INTERPOLATION---
+    bilinearInterpolation(heightmap);
+    
     cv::imshow("Digital Elevation Model", heightmap);
     cv::waitKey(0);
 
+    //filtrationViz(cloud_filtered, cloud);
     return 0;
 }
