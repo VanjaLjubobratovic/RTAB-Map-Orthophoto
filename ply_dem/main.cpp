@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include <cmath>
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -10,6 +11,29 @@
 #include <pcl/common/common.h>
 
 #include <opencv2/opencv.hpp>
+#include <opencv2/flann.hpp>
+
+
+cv::Mat extractDataPoints(const cv::Mat& dem) {
+    cv::Mat points;
+
+    for (int i = 0; i < dem.rows; i++) {
+        for (int j = 0; j < dem.cols; j++) {
+            if(!std::isnan(dem.at<float>(i, j))) {
+                points.push_back(cv::Point2f(i, j));
+            }
+        }
+    }
+
+    points = points.reshape(1);
+    points.convertTo(points, CV_32F);
+
+    return points;
+}
+
+cv::flann::Index buildKDTree(const cv::Mat& dataPoints) {
+    return cv::flann::Index(dataPoints, cv::flann::KDTreeIndexParams());
+}
 
 pcl::PointXYZRGB calculateCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud) {
     //---CALCULATING CENTROID---
@@ -90,9 +114,39 @@ void bilinearInterpolation(cv::Mat& dem) {
     dem = interpolatedDem;
 }
 
+void nearestNeighbourInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree) {
+    cv::Mat interpolated = dem.clone();
+
+    for(int i = 0; i < dem.rows; i++) {
+        for(int j = 0; j < dem.cols; j++) {
+            if(std::isnan(dem.at<float>(i, j))) {
+                std::vector<float> queryData = {(float) i, (float) j};
+                int querynum = 1;
+                std::vector<int> indices(querynum);
+                std::vector<float> dists(querynum);
+
+                //kdTree.knnSearch(queryData, indices, dists, querynum, cv::flann::SearchParams());
+                kdTree.radiusSearch(queryData, indices, dists, 10, querynum, cv::flann::SearchParams()); //radius is in "pixels"
+
+                //cout << dists[0] << endl;
+
+                int index = indices[0];
+
+                //I know that I is supposed to represent y axis, leave me alone
+                int nearest_i = dataPoints.at<cv::Point2f>(index).x;
+                int nearest_j = dataPoints.at<cv::Point2f>(index).y;
+
+                interpolated.at<float>(i, j) = dem.at<float>(nearest_i, nearest_j);
+            }
+        }
+    }
+
+    dem = interpolated;
+}
+
 int main(int, char**){
-    std::string plyPath = "/home/vanja/Desktop/CLOUD/room_test/cloud_nofilter.ply";
-    //std::string plyPath = "/home/vanja/Desktop/Robotika Projekt/cloud_kitchen.ply";
+    //std::string plyPath = "/home/vanja/Desktop/CLOUD/room_test/cloud_nofilter.ply";
+    std::string plyPath = "/home/vanja/Desktop/Robotika Projekt/stereo_outdoor.ply";
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     if(pcl::io::loadPLYFile<pcl::PointXYZRGB>(plyPath, *cloud) == -1) {
         cerr << "ERROR: Unable to load PLY file." << endl;
@@ -119,7 +173,8 @@ int main(int, char**){
 
 
     //---GENERATING DEM---
-    double grid_resolution = 0.008;
+    cout << "Starting heightmap generation" << endl;
+    double grid_resolution = 0.05;
 
     pcl::PointXYZRGB min, max;
     pcl::getMinMax3D(*cloud_filtered, min, max);
@@ -127,7 +182,7 @@ int main(int, char**){
     int rows = ceil((max.y - min.y) / grid_resolution);
     int cols = ceil((max.x - min.x) / grid_resolution);
 
-    cv::Mat heightmap(rows, cols, CV_32FC1, cv::Scalar::all(std::numeric_limits<float>::quiet_NaN()));
+    cv::Mat heightmap(rows, cols, CV_32F, cv::Scalar::all(std::numeric_limits<float>::quiet_NaN()));
 
 
     for(const auto& point : cloud_filtered->points){
@@ -141,15 +196,24 @@ int main(int, char**){
         }
     }
 
+    cout << "Done generating heightmap" << endl;
     
-    cv::flip(heightmap, heightmap, 0); //Flip along X-axis (row and col calculation flips image)
-    cv::normalize(heightmap, heightmap, 0, 255, cv::NORM_MINMAX, CV_8UC1); //Without this a lot of points end up invisible
+    //cv::flip(heightmap, heightmap, 0); //Flip along X-axis (row and col calculation flips image)
+   
+    //---INTERPOLATION---
+    cout << "Starting interpolation" << endl;
+    cv::Mat dataPoints = extractDataPoints(heightmap); //We build kd-tree only with non-NaN points
+    cv::flann::Index kdTree = buildKDTree(dataPoints); //kd-tree build
+    nearestNeighbourInterpolation(heightmap, dataPoints, kdTree); // interpolation
+    cout << "Done interpolating" << endl;
 
-    //---BILINEAR INTERPOLATION---
-    bilinearInterpolation(heightmap);
-    
+
+    //---SHOW FINAL RESULT---
+    cv::normalize(heightmap, heightmap, 0, 255, cv::NORM_MINMAX, CV_8U);
     cv::imshow("Digital Elevation Model", heightmap);
     cv::waitKey(0);
+
+    
 
     //filtrationViz(cloud_filtered, cloud);
     return 0;

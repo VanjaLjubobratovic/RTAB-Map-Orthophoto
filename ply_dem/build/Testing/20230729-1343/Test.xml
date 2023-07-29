@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Site BuildName="Linux-g++"
+	BuildStamp="20230729-1343-Experimental"
+	Name="vanja-B450M-GAMING"
+	Generator="ctest-3.22.1"
+	CompilerName="/usr/bin/g++"
+	CompilerVersion="11.3.0"
+	OSName="Linux"
+	Hostname="vanja-B450M-GAMING"
+	OSRelease="5.19.0-50-generic"
+	OSVersion="#50-Ubuntu SMP PREEMPT_DYNAMIC Mon Jul 10 18:24:29 UTC 2023"
+	OSPlatform="x86_64"
+	Is64Bits="1"
+	VendorString="AuthenticAMD"
+	VendorID="Advanced Micro Devices"
+	FamilyID="23"
+	ModelID="113"
+	ProcessorCacheSize="512"
+	NumberOfLogicalCPU="16"
+	NumberOfPhysicalCPU="8"
+	TotalVirtualMemory="2047"
+	TotalPhysicalMemory="15909"
+	LogicalProcessorsPerPhysical="2"
+	ProcessorClockFrequency="4069.32"
+	>
+	<Testing>
+		<StartDateTime>Jul 29 22:02 CEST</StartDateTime>
+		<StartTestTime>1690660976</StartTestTime>
+		<TestList/>
+		<EndDateTime>Jul 29 22:02 CEST</EndDateTime>
+		<EndTestTime>1690660976</EndTestTime>
+		<ElapsedMinutes>0</ElapsedMinutes>
+	</Testing>
+</Site>
