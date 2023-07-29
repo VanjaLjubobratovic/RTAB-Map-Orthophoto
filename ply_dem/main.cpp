@@ -86,34 +86,6 @@ void filtrationViz(pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered, pcl::PointCl
     }
 }
 
-void bilinearInterpolation(cv::Mat& dem) {
-    cv::Mat interpolatedDem = dem.clone();
-
-    for(int i = 0; i < dem.rows; ++i) {
-        for(int j = 0; j < dem.cols; ++j) {
-            if(std::isnan(dem.at<float>(i, j))) {
-                float sum = 0.0f;
-                int count = 0;
-
-                for(int x = i-1; x <= i+1; ++x) {
-                    for(int y = j-1; y <= j+1; ++y) {
-                        if(!std::isnan(dem.at<float>(x, y))) {
-                            sum += dem.at<float>(x, y);
-                            count++;
-                        }
-                    }
-                }
-
-                if(count > 0) {
-                    interpolatedDem.at<float>(i, j) = sum / count;
-                }
-            }
-        }
-    }
-
-    dem = interpolatedDem;
-}
-
 void nearestNeighbourInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree) {
     cv::Mat interpolated = dem.clone();
 
