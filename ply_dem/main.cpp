@@ -118,7 +118,8 @@ void nearestNeighbourInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann:
 
 int main(int, char**){
     //std::string plyPath = "/home/vanja/Desktop/CLOUD/room_test/cloud_nofilter.ply";
-    std::string plyPath = "/home/vanja/Desktop/Robotika Projekt/stereo_outdoor.ply";
+    //std::string plyPath = "/home/vanja/Desktop/Robotika Projekt/stereo_outdoor.ply";
+    std::string plyPath = "/home/vanja/Desktop/Robotika Projekt/cloud_kitchen.ply";
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     if(pcl::io::loadPLYFile<pcl::PointXYZRGB>(plyPath, *cloud) == -1) {
         cerr << "ERROR: Unable to load PLY file." << endl;
@@ -146,7 +147,7 @@ int main(int, char**){
 
     //---GENERATING DEM---
     cout << "Starting heightmap generation" << endl;
-    double grid_resolution = 0.05;
+    double grid_resolution = 0.005;
 
     pcl::PointXYZRGB min, max;
     pcl::getMinMax3D(*cloud_filtered, min, max);
@@ -182,7 +183,8 @@ int main(int, char**){
 
     //---SHOW FINAL RESULT---
     cv::normalize(heightmap, heightmap, 0, 255, cv::NORM_MINMAX, CV_8U);
-    cv::imshow("Digital Elevation Model", heightmap);
+    //cv::imshow("Digital Elevation Model", heightmap);
+    cv::imwrite("../outputDem.jpg", heightmap);
     cv::waitKey(0);
 
     
