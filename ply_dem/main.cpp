@@ -9,6 +9,7 @@
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/io/ply_io.h>
 #include <pcl/common/common.h>
+#include <pcl/common/transforms.h>
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/flann.hpp>
@@ -53,7 +54,13 @@ pcl::PointXYZRGB calculateCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud)
 }
 
 void filtrationViz(pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered, pcl::PointCloud<pcl::PointXYZRGB>::Ptr raw) {
-    //---POINTCLOUD VISUALIZATION---
+     //---VISUALIZATION OF POINTCLOUDS---
+    /*
+        Call this at the end of your code, because it will
+        block execution of code after it and closing
+        the visualizer causes a segmentation fault for some reason!
+    */
+
     auto centroid = calculateCentroid(filtered);
 
     auto viewer(new pcl::visualization::PCLVisualizer("Point cloud filter vs raw"));
@@ -97,7 +104,6 @@ void nearestNeighbourInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann:
                 std::vector<int> indices(querynum);
                 std::vector<float> dists(querynum);
 
-                //kdTree.knnSearch(queryData, indices, dists, querynum, cv::flann::SearchParams());
                 kdTree.radiusSearch(queryData, indices, dists, 10, querynum, cv::flann::SearchParams()); //radius is in "pixels"
 
                 //cout << dists[0] << endl;
@@ -119,7 +125,7 @@ void nearestNeighbourInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann:
 int main(int, char**){
     //std::string plyPath = "/home/vanja/Desktop/CLOUD/room_test/cloud_nofilter.ply";
     //std::string plyPath = "/home/vanja/Desktop/Robotika Projekt/stereo_outdoor.ply";
-    std::string plyPath = "/home/vanja/Desktop/Robotika Projekt/cloud_kitchen.ply";
+    std::string plyPath = "/home/vanja/Desktop/CLOUD/rgbd-scenes-v2/pc/14.ply";
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     if(pcl::io::loadPLYFile<pcl::PointXYZRGB>(plyPath, *cloud) == -1) {
         cerr << "ERROR: Unable to load PLY file." << endl;
@@ -135,14 +141,23 @@ int main(int, char**){
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
     sor.filter(*cloud_filtered);
 
+    //TODO: REMOVE THIS, DATASET IS UPSIDE DOWN FOR SOME REASON AND ALSO TILTED
+    for (int i = 0; i < cloud->size(); i++) {
+        //Swapping y and z axis and changing z axis direction
+        float tmp = cloud->points[i].y;
+        cloud->points[i].y = cloud->points[i].z;
+        cloud->points[i].z = -tmp;
+    }
 
-    //---VISUALIZATION OF POINTCLOUDS---
-    /*
-        Call this at the end of your code, because it will
-        block execution of code after it and closing
-        the visualizer causes a segmentation fault!
-    */
-    //filtrationViz(cloud_filtered, cloud);
+    //Approximately correcting the tilt in dataset
+    float angle_rad = -20.0f * M_PI / 180.0;
+    Eigen::Affine3f rotation_matrix = Eigen::Affine3f::Identity();
+    rotation_matrix.rotate(Eigen::AngleAxisf(angle_rad, Eigen::Vector3f::UnitX()));
+    pcl::transformPointCloud(*cloud, *cloud, rotation_matrix);
+
+
+    //TODO: I'm not filtering because dataset is high quality
+    cloud_filtered = cloud;
 
 
     //---GENERATING DEM---
@@ -169,10 +184,10 @@ int main(int, char**){
         }
     }
 
+    cv::flip(heightmap, heightmap, 0); //Flip along X-axis (row and col calculation flips image)
+
     cout << "Done generating heightmap" << endl;
     
-    //cv::flip(heightmap, heightmap, 0); //Flip along X-axis (row and col calculation flips image)
-   
     //---INTERPOLATION---
     cout << "Starting interpolation" << endl;
     cv::Mat dataPoints = extractDataPoints(heightmap); //We build kd-tree only with non-NaN points
@@ -183,12 +198,12 @@ int main(int, char**){
 
     //---SHOW FINAL RESULT---
     cv::normalize(heightmap, heightmap, 0, 255, cv::NORM_MINMAX, CV_8U);
-    //cv::imshow("Digital Elevation Model", heightmap);
     cv::imwrite("../outputDem.jpg", heightmap);
+    cout << "DEM saved to file!" << endl;
     cv::waitKey(0);
 
     
 
-    //filtrationViz(cloud_filtered, cloud);
+    filtrationViz(cloud_filtered, cloud);
     return 0;
 }
