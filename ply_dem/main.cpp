@@ -125,7 +125,7 @@ void nearestNeighbourInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann:
 int main(int, char**){
     //std::string plyPath = "/home/vanja/Desktop/CLOUD/room_test/cloud_nofilter.ply";
     //std::string plyPath = "/home/vanja/Desktop/Robotika Projekt/stereo_outdoor.ply";
-    std::string plyPath = "/home/vanja/Desktop/CLOUD/rgbd-scenes-v2/pc/14.ply";
+    std::string plyPath = "/home/vanja/Desktop/CLOUD/rgbd-scenes-v2/pc/09.ply";
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     if(pcl::io::loadPLYFile<pcl::PointXYZRGB>(plyPath, *cloud) == -1) {
         cerr << "ERROR: Unable to load PLY file." << endl;
@@ -204,6 +204,6 @@ int main(int, char**){
 
     
 
-    filtrationViz(cloud_filtered, cloud);
+    //filtrationViz(cloud_filtered, cloud);
     return 0;
 }
