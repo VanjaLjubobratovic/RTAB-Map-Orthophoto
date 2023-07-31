@@ -15,7 +15,6 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/flann.hpp>
 
-
 cv::Mat extractDataPoints(const cv::Mat& dem) {
     cv::Mat points;
 
@@ -94,27 +93,62 @@ void filtrationViz(pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered, pcl::PointCl
     }
 }
 
-void nearestNeighbourInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree) {
+void nearestNeighbourInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius) {
     cv::Mat interpolated = dem.clone();
 
     for(int i = 0; i < dem.rows; i++) {
         for(int j = 0; j < dem.cols; j++) {
             if(std::isnan(dem.at<float>(i, j))) {
                 std::vector<float> queryData = {(float) i, (float) j};
-                int querynum = 1;
                 std::vector<int> indices;
                 std::vector<float> dists;
 
-                kdTree.radiusSearch(queryData, indices, dists, 10, querynum, cv::flann::SearchParams()); //radius is in "pixels"
+                kdTree.radiusSearch(queryData, indices, dists, searchRadius, 1, cv::flann::SearchParams()); //radius is in "pixels"
 
                 if(indices[0] == 0 && dists[0] == 0.0)
-                    continue; //no neighbour find within radius
+                    continue; //No neighbour found
 
                 //I know that I is supposed to represent y axis, leave me alone
                 int nearest_i = dataPoints.at<cv::Point2f>(indices[0]).x;
                 int nearest_j = dataPoints.at<cv::Point2f>(indices[0]).y;
 
                 interpolated.at<float>(i, j) = dem.at<float>(nearest_i, nearest_j);
+            }
+        }
+    }
+
+    dem = interpolated;
+}
+
+
+void knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int nNeighbors, float p) {
+    cv::Mat interpolated = dem.clone();
+
+    for(int i = 0; i < dem.rows; i++) {
+        for(int j = 0; j < dem.cols; j++) {
+            if(std::isnan(dem.at<float>(i, j))){
+                std::vector<float> queryData = {(float) i, (float) j};
+                std::vector<float> dists;
+                std::vector<int> indices;
+
+                kdTree.radiusSearch(queryData, indices, dists, searchRadius, nNeighbors, cv::flann::SearchParams());
+
+                if(indices[0] == 0 && dists[0] == 0.0)
+                    continue; //No neighbours found*/
+
+                float numerator = 0;
+                float denominator = 0;
+
+                for(int k = 0; k < indices.size(); k++) {
+                    int n_i = dataPoints.at<cv::Point2f>(indices[k]).x;
+                    int n_j = dataPoints.at<cv::Point2f>(indices[k]).y;
+
+                    float wi = 1.0 / pow(dists[k], p);
+                    numerator += wi * dem.at<float>(n_i, n_j);
+                    denominator += wi;
+                }
+
+                interpolated.at<float>(i, j) = numerator / denominator;
             }
         }
     }
@@ -192,7 +226,8 @@ int main(int, char**){
     cout << "Starting interpolation" << endl;
     cv::Mat dataPoints = extractDataPoints(heightmap); //We build kd-tree only with non-NaN points
     cv::flann::Index kdTree = buildKDTree(dataPoints); //kd-tree build
-    nearestNeighbourInterpolation(heightmap, dataPoints, kdTree); // interpolation
+    //nearestNeighbourInterpolation(heightmap, dataPoints, kdTree, 10); // interpolation
+    knnInterpolation(heightmap, dataPoints, kdTree, 10, 5, 4.0);
     cout << "Done interpolating" << endl;
 
 
