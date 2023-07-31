@@ -2,6 +2,7 @@
 #include <string>
 #include <thread>
 #include <cmath>
+#include <fstream>
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -96,19 +97,24 @@ void filtrationViz(pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered, pcl::PointCl
 void nearestNeighbourInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree) {
     cv::Mat interpolated = dem.clone();
 
+    std::ofstream outputFile("../indices.txt");
+
     for(int i = 0; i < dem.rows; i++) {
         for(int j = 0; j < dem.cols; j++) {
             if(std::isnan(dem.at<float>(i, j))) {
                 std::vector<float> queryData = {(float) i, (float) j};
                 int querynum = 1;
-                std::vector<int> indices(querynum);
-                std::vector<float> dists(querynum);
+                std::vector<int> indices;
+                std::vector<float> dists;
 
                 kdTree.radiusSearch(queryData, indices, dists, 10, querynum, cv::flann::SearchParams()); //radius is in "pixels"
 
-                //cout << dists[0] << endl;
+                if(indices[0] == 0 && dists[0] == 0.0)
+                    continue; //no neighbour find within radius
 
                 int index = indices[0];
+
+                outputFile << index << "   " << dists[0] << endl;
 
                 //I know that I is supposed to represent y axis, leave me alone
                 int nearest_i = dataPoints.at<cv::Point2f>(index).x;
@@ -118,6 +124,8 @@ void nearestNeighbourInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann:
             }
         }
     }
+
+    outputFile.close();
 
     dem = interpolated;
 }

@@ -221,6 +221,11 @@ CMakeFiles/ply_to_dem.dir/main.cpp.o: ../main.cpp \
   /usr/include/c++/11/tr1/poly_hermite.tcc \
   /usr/include/c++/11/tr1/poly_laguerre.tcc \
   /usr/include/c++/11/tr1/riemann_zeta.tcc \
+  /usr/include/c++/11/fstream \
+  /usr/include/c++/11/bits/codecvt.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h \
+  /usr/include/c++/11/bits/fstream.tcc \
   /usr/include/pcl-1.12/pcl/point_cloud.h \
   /usr/include/eigen3/Eigen/StdVector \
   /usr/include/eigen3/Eigen/Core \
@@ -784,7 +789,6 @@ CMakeFiles/ply_to_dem.dir/main.cpp.o: ../main.cpp \
   /usr/include/x86_64-linux-gnu/c++/11/bits/time_members.h \
   /usr/include/x86_64-linux-gnu/c++/11/bits/messages_members.h \
   /usr/include/libintl.h \
-  /usr/include/c++/11/bits/codecvt.h \
   /usr/include/c++/11/bits/locale_facets_nonio.tcc \
   /usr/include/c++/11/bits/locale_conv.h \
   /usr/include/pcl-1.12/pcl/common/impl/io.hpp \
@@ -899,10 +903,6 @@ CMakeFiles/ply_to_dem.dir/main.cpp.o: ../main.cpp \
   /usr/include/vtk-9.1/vtkBuild.h \
   /usr/include/vtk-9.1/vtkPlatform.h \
   /usr/include/vtk-9.1/vtkIOStream.h \
-  /usr/include/c++/11/fstream \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h \
-  /usr/include/c++/11/bits/fstream.tcc \
   /usr/include/c++/11/iomanip \
   /usr/include/c++/11/bits/quoted_string.h \
   /usr/include/vtk-9.1/vtkType.h \
@@ -2762,29 +2762,11 @@ CMakeFiles/ply_to_dem.dir/main.cpp.o: ../main.cpp \
 
 /usr/include/boost/move/core.hpp:
 
-/usr/include/boost/preprocessor/control/detail/while.hpp:
-
-/usr/include/pcl-1.12/pcl/filters/filter_indices.h:
-
-/usr/include/boost/preprocessor/list/fold_right.hpp:
-
-/usr/include/vtk-9.1/vtkTypeList.txx:
-
-/usr/include/boost/mpl/assert.hpp:
-
-/usr/include/boost/mpl/advance.hpp:
-
-/usr/include/vtk-9.1/vtkIdList.h:
-
 /usr/include/boost/preprocessor/detail/check.hpp:
 
 /usr/include/eigen3/Eigen/src/Geometry/Scaling.h:
 
 /usr/include/boost/preprocessor/list/adt.hpp:
-
-/usr/include/boost/range/iterator.hpp:
-
-/usr/include/pcl-1.12/pcl/point_cloud.h:
 
 /usr/include/boost/mpl/aux_/type_wrapper.hpp:
 
@@ -2859,12 +2841,6 @@ CMakeFiles/ply_to_dem.dir/main.cpp.o: ../main.cpp \
 /usr/include/boost/detail/templated_streams.hpp:
 
 /usr/include/boost/preprocessor/config/config.hpp:
-
-/usr/include/boost/variant/variant.hpp:
-
-/usr/include/boost/mpl/aux_/config/preprocessor.hpp:
-
-/usr/include/c++/11/ext/numeric_traits.h:
 
 /usr/include/c++/11/cfloat:
 
@@ -3001,14 +2977,6 @@ CMakeFiles/ply_to_dem.dir/main.cpp.o: ../main.cpp \
 /usr/include/eigen3/Eigen/Cholesky:
 
 /usr/include/c++/11/bits/invoke.h:
-
-/usr/include/opencv4/opencv2/photo.hpp:
-
-/usr/include/boost/type_traits/has_plus.hpp:
-
-/usr/include/boost/type_traits/is_convertible.hpp:
-
-/usr/include/boost/mpl/aux_/nttp_decl.hpp:
 
 /usr/include/boost/mpl/min_max.hpp:
 
@@ -3274,12 +3242,6 @@ CMakeFiles/ply_to_dem.dir/main.cpp.o: ../main.cpp \
 
 /usr/include/vtk-9.1/vtkkwiml/int.h:
 
-/usr/include/boost/mpl/quote.hpp:
-
-/usr/include/boost/mpl/pair.hpp:
-
-/usr/include/eigen3/Eigen/src/Core/arch/Default/Half.h:
-
 /usr/include/boost/preprocessor/facilities/identity.hpp:
 
 /usr/include/boost/fusion/algorithm/transformation/insert_range.hpp:
@@ -3317,6 +3279,10 @@ CMakeFiles/ply_to_dem.dir/main.cpp.o: ../main.cpp \
 /usr/include/boost/fusion/algorithm/transformation/push_back.hpp:
 
 /usr/include/vtk-9.1/vtkMathConfigure.h:
+
+/usr/include/boost/mpl/pair.hpp:
+
+/usr/include/eigen3/Eigen/src/Core/arch/Default/Half.h:
 
 /usr/include/boost/detail/basic_pointerbuf.hpp:
 
@@ -3402,13 +3368,25 @@ CMakeFiles/ply_to_dem.dir/main.cpp.o: ../main.cpp \
 
 /usr/include/strings.h:
 
-/usr/include/boost/fusion/view/filter_view/detail/deref_data_impl.hpp:
+/usr/include/c++/11/pstl/execution_defs.h:
 
-/usr/include/boost/preprocessor/list/reverse.hpp:
+/usr/include/boost/mpl/vector/aux_/back.hpp:
 
-/usr/include/boost/mpl/list/aux_/pop_front.hpp:
+/usr/include/boost/mpl/aux_/preprocessed/gcc/minus.hpp:
 
-/usr/include/eigen3/Eigen/src/Core/Transpositions.h:
+/usr/include/boost/preprocessor/iteration/detail/iter/forward1.hpp:
+
+/usr/include/boost/optional/detail/optional_trivially_copyable_base.hpp:
+
+/usr/include/boost/preprocessor/debug/error.hpp:
+
+/usr/include/eigen3/Eigen/src/Core/BooleanRedux.h:
+
+/usr/include/c++/11/bits/stl_algo.h:
+
+/usr/include/c++/11/bits/vector.tcc:
+
+/usr/include/c++/11/fstream:
 
 /usr/include/c++/11/bits/basic_string.h:
 
@@ -3465,14 +3443,6 @@ CMakeFiles/ply_to_dem.dir/main.cpp.o: ../main.cpp \
 /usr/include/x86_64-linux-gnu/bits/thread-shared-types.h:
 
 /usr/include/eigen3/Eigen/src/Core/Assign.h:
-
-/usr/include/boost/optional/detail/optional_aligned_storage.hpp:
-
-/usr/include/c++/11/set:
-
-/usr/include/boost/preprocessor/identity.hpp:
-
-/usr/include/eigen3/Eigen/StdVector:
 
 /usr/include/c++/11/bits/hashtable_policy.h:
 
@@ -3776,6 +3746,8 @@ CMakeFiles/ply_to_dem.dir/main.cpp.o: ../main.cpp \
 
 /usr/include/c++/11/bits/allocator.h:
 
+/usr/include/c++/11/bits/stl_tempbuf.h:
+
 /usr/include/boost/config.hpp:
 
 /usr/include/x86_64-linux-gnu/bits/setjmp.h:
@@ -3794,9 +3766,19 @@ CMakeFiles/ply_to_dem.dir/main.cpp.o: ../main.cpp \
 
 /usr/include/c++/11/bits/stl_function.h:
 
-/usr/include/boost/preprocessor/logical/compl.hpp:
+/usr/include/boost/variant/variant.hpp:
 
-/usr/include/eigen3/Eigen/src/Core/util/Macros.h:
+/usr/include/boost/mpl/aux_/config/preprocessor.hpp:
+
+/usr/include/c++/11/ext/numeric_traits.h:
+
+/usr/include/opencv4/opencv2/photo.hpp:
+
+/usr/include/boost/type_traits/has_plus.hpp:
+
+/usr/include/boost/mpl/aux_/nttp_decl.hpp:
+
+/usr/include/boost/type_traits/is_convertible.hpp:
 
 /usr/include/eigen3/Eigen/src/Core/BandMatrix.h:
 
@@ -3907,8 +3889,6 @@ CMakeFiles/ply_to_dem.dir/main.cpp.o: ../main.cpp \
 /usr/include/c++/11/bits/nested_exception.h:
 
 /usr/include/boost/iterator/reverse_iterator.hpp:
-
-/usr/include/c++/11/bits/stl_tempbuf.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h:
 
@@ -4036,6 +4016,12 @@ CMakeFiles/ply_to_dem.dir/main.cpp.o: ../main.cpp \
 
 /usr/include/alloca.h:
 
+/usr/include/c++/11/bits/stl_heap.h:
+
+/usr/include/eigen3/Eigen/src/Core/util/Macros.h:
+
+/usr/include/boost/preprocessor/logical/compl.hpp:
+
 /usr/include/x86_64-linux-gnu/bits/wordsize.h:
 
 /usr/include/c++/11/chrono:
@@ -4055,6 +4041,14 @@ CMakeFiles/ply_to_dem.dir/main.cpp.o: ../main.cpp \
 /usr/include/x86_64-linux-gnu/bits/types/cookie_io_functions_t.h:
 
 /usr/include/boost/predef/library/c/_prefix.h:
+
+/usr/include/boost/mpl/list/aux_/pop_front.hpp:
+
+/usr/include/eigen3/Eigen/src/Core/Transpositions.h:
+
+/usr/include/boost/fusion/view/filter_view/detail/deref_data_impl.hpp:
+
+/usr/include/boost/preprocessor/list/reverse.hpp:
 
 /usr/include/x86_64-linux-gnu/bits/errno.h:
 
@@ -4107,14 +4101,6 @@ CMakeFiles/ply_to_dem.dir/main.cpp.o: ../main.cpp \
 /usr/include/boost/config/detail/suffix.hpp:
 
 /usr/include/c++/11/bits/node_handle.h:
-
-/usr/include/eigen3/Eigen/src/Geometry/AlignedBox.h:
-
-/usr/include/boost/range/rend.hpp:
-
-/usr/include/boost/type_traits/has_trivial_assign.hpp:
-
-/usr/include/boost/mpl/arg.hpp:
 
 /usr/include/c++/11/cstddef:
 
@@ -4204,6 +4190,22 @@ CMakeFiles/ply_to_dem.dir/main.cpp.o: ../main.cpp \
 
 /usr/include/c++/11/bits/stl_relops.h:
 
+/usr/include/vtk-9.1/vtkTypeList.txx:
+
+/usr/include/boost/mpl/assert.hpp:
+
+/usr/include/pcl-1.12/pcl/filters/filter_indices.h:
+
+/usr/include/boost/preprocessor/list/fold_right.hpp:
+
+/usr/include/pcl-1.12/pcl/point_cloud.h:
+
+/usr/include/boost/range/iterator.hpp:
+
+/usr/include/boost/mpl/advance.hpp:
+
+/usr/include/vtk-9.1/vtkIdList.h:
+
 /usr/include/eigen3/Eigen/src/plugins/ArrayCwiseBinaryOps.h:
 
 /usr/include/c++/11/bits/refwrap.h:
@@ -4245,14 +4247,6 @@ CMakeFiles/ply_to_dem.dir/main.cpp.o: ../main.cpp \
 /usr/include/pcl-1.12/pcl/PCLPointCloud2.h:
 
 /usr/include/c++/11/cassert:
-
-/usr/include/boost/optional/detail/optional_trivially_copyable_base.hpp:
-
-/usr/include/boost/preprocessor/debug/error.hpp:
-
-/usr/include/eigen3/Eigen/src/Core/BooleanRedux.h:
-
-/usr/include/c++/11/bits/stl_algo.h:
 
 /usr/include/eigen3/Eigen/src/LU/Determinant.h:
 
@@ -4305,6 +4299,28 @@ CMakeFiles/ply_to_dem.dir/main.cpp.o: ../main.cpp \
 /usr/include/limits.h:
 
 /usr/include/c++/11/tr1/riemann_zeta.tcc:
+
+/usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h:
+
+/usr/include/boost/type_traits/add_pointer.hpp:
+
+/usr/include/boost/optional/detail/optional_aligned_storage.hpp:
+
+/usr/include/c++/11/set:
+
+/usr/include/eigen3/Eigen/StdVector:
+
+/usr/include/boost/preprocessor/identity.hpp:
+
+/usr/include/boost/mpl/quote.hpp:
+
+/usr/include/eigen3/Eigen/src/Geometry/AlignedBox.h:
+
+/usr/include/boost/type_traits/has_trivial_assign.hpp:
+
+/usr/include/boost/mpl/arg.hpp:
+
+/usr/include/boost/range/rend.hpp:
 
 /usr/include/opencv4/opencv2/flann/lsh_table.h:
 
@@ -4374,17 +4390,7 @@ CMakeFiles/ply_to_dem.dir/main.cpp.o: ../main.cpp \
 
 /usr/include/c++/11/bits/stl_bvector.h:
 
-/usr/include/c++/11/bits/vector.tcc:
-
-/usr/include/c++/11/pstl/execution_defs.h:
-
-/usr/include/boost/mpl/vector/aux_/back.hpp:
-
-/usr/include/boost/mpl/aux_/preprocessed/gcc/minus.hpp:
-
-/usr/include/boost/preprocessor/iteration/detail/iter/forward1.hpp:
-
-/usr/include/c++/11/bits/stl_heap.h:
+/usr/include/boost/preprocessor/control/detail/while.hpp:
 
 /usr/include/boost/fusion/include/mpl.hpp:
 
@@ -5148,10 +5154,6 @@ CMakeFiles/ply_to_dem.dir/main.cpp.o: ../main.cpp \
 
 /usr/include/boost/type_traits/add_const.hpp:
 
-/usr/include/boost/type_traits/add_pointer.hpp:
-
-/usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h:
-
 /usr/include/boost/type_traits/detail/config.hpp:
 
 /usr/include/boost/type_traits/is_enum.hpp:
@@ -5173,8 +5175,6 @@ CMakeFiles/ply_to_dem.dir/main.cpp.o: ../main.cpp \
 /usr/include/vtk-9.1/vtkABI.h:
 
 /usr/include/vtk-9.1/vtkPlatform.h:
-
-/usr/include/c++/11/fstream:
 
 /usr/include/opencv4/opencv2/videoio.hpp:
 
