@@ -3,8 +3,8 @@
 # Without this ros2 launch won't be able to locate launchfiles
 # in ros2_ws folder
 source /opt/ros/humble/setup.bash
-cd ~/ros2_ws
-. install/local_setup.bash
+#cd ~/ros2_ws
+#. install/local_setup.bash
 
 ros2 launch realsense2_camera rs_launch.py \
 rgb_camera.profile:=848x480x15 \
