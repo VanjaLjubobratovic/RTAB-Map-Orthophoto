@@ -1,7 +1,0 @@
-[
-{
-  "directory": "/home/vanja/RTAB-Map-Orthophoto/ply_dem/build",
-  "command": "/usr/bin/g++ -DBOOST_ALL_NO_LIB -DBOOST_DATE_TIME_DYN_LINK -DBOOST_FILESYSTEM_DYN_LINK -DBOOST_IOSTREAMS_DYN_LINK -DBOOST_SERIALIZATION_DYN_LINK -DBOOST_SYSTEM_DYN_LINK -DDISABLE_PCAP -DQT_CORE_LIB -DQT_GUI_LIB -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -DTBB_USE_DEBUG -Dkiss_fft_scalar=double -isystem /usr/include/pcl-1.12 -isystem /usr/include/eigen3 -isystem /usr/include/ni -isystem /usr/include/openni2 -isystem /usr/include/opencv4 -isystem /usr/include/vtk-9.1 -isystem /usr/include/jsoncpp -isystem /usr/include/freetype2 -isystem /usr/include/x86_64-linux-gnu/qt5 -isystem /usr/include/x86_64-linux-gnu/qt5/QtOpenGL -isystem /usr/include/x86_64-linux-gnu/qt5/QtWidgets -isystem /usr/include/x86_64-linux-gnu/qt5/QtGui -isystem /usr/include/x86_64-linux-gnu/qt5/QtCore -isystem /usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -g -fPIC -o CMakeFiles/ply_to_dem.dir/main.cpp.o -c /home/vanja/RTAB-Map-Orthophoto/ply_dem/main.cpp",
-  "file": "/home/vanja/RTAB-Map-Orthophoto/ply_dem/main.cpp"
-}
-]
