@@ -157,15 +157,29 @@ void knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTre
 }
 
 int main(int, char**){
-    //std::string plyPath = "/home/vanja/Desktop/CLOUD/room_test/cloud_nofilter.ply";
-    //std::string plyPath = "/home/vanja/Desktop/BalconyCloud/balcony2.ply";
-    std::string plyPath = "/home/vanja/Desktop/CLOUD/rgbd-scenes-v2/pc/09.ply";
+    std::string plyPath = "/home/vanja/Desktop/CLOUD/livingroom/livingroom.ply";
+    //std::string plyPath = "/home/vanja/Desktop/CLOUD/rgbd-scenes-v2/pc/09.ply";
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     if(pcl::io::loadPLYFile<pcl::PointXYZRGB>(plyPath, *cloud) == -1) {
         cerr << "ERROR: Unable to load PLY file." << endl;
         return -1;
     }
+
+
+    //TODO: REMOVE THIS, DATASET IS UPSIDE DOWN FOR SOME REASON AND ALSO TILTED
+    /*for (int i = 0; i < cloud->size(); i++) {
+        //Swapping y and z axis and changing z axis direction
+        float tmp = cloud->points[i].y;
+        cloud->points[i].y = cloud->points[i].z;
+        cloud->points[i].z = -tmp;
+    }*/
+
+    //Approximately correcting the tilt in dataset
+    float angle_rad = 25.0f * M_PI / 180.0;
+    Eigen::Affine3f rotation_matrix = Eigen::Affine3f::Identity();
+    rotation_matrix.rotate(Eigen::AngleAxisf(angle_rad, Eigen::Vector3f::UnitX()));
+    pcl::transformPointCloud(*cloud, *cloud, rotation_matrix);
 
     //---FILTERING OUTLIERS---
     pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
@@ -176,23 +190,9 @@ int main(int, char**){
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
     sor.filter(*cloud_filtered);
 
-    //TODO: REMOVE THIS, DATASET IS UPSIDE DOWN FOR SOME REASON AND ALSO TILTED
-    for (int i = 0; i < cloud->size(); i++) {
-        //Swapping y and z axis and changing z axis direction
-        float tmp = cloud->points[i].y;
-        cloud->points[i].y = cloud->points[i].z;
-        cloud->points[i].z = -tmp;
-    }
-
-    //Approximately correcting the tilt in dataset
-    float angle_rad = -20.0f * M_PI / 180.0;
-    Eigen::Affine3f rotation_matrix = Eigen::Affine3f::Identity();
-    rotation_matrix.rotate(Eigen::AngleAxisf(angle_rad, Eigen::Vector3f::UnitX()));
-    pcl::transformPointCloud(*cloud, *cloud, rotation_matrix);
-
 
     //TODO: I'm not filtering because dataset is high quality
-    cloud_filtered = cloud;
+    //cloud_filtered = cloud;
 
 
     //---GENERATING DEM---
@@ -227,8 +227,8 @@ int main(int, char**){
     cout << "Starting interpolation" << endl;
     cv::Mat dataPoints = extractDataPoints(heightmap); //We build kd-tree only with non-NaN points
     cv::flann::Index kdTree = buildKDTree(dataPoints); //kd-tree build
-    //nearestNeighbourInterpolation(heightmap, dataPoints, kdTree, 10); // interpolation
-    knnInterpolation(heightmap, dataPoints, kdTree, 10, 5, 4.0);
+    nearestNeighbourInterpolation(heightmap, dataPoints, kdTree, 10); // interpolation
+    //knnInterpolation(heightmap, dataPoints, kdTree, 10, 5, 4.0);
     cout << "Done interpolating" << endl;
 
 
