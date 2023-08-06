@@ -1,7 +1,7 @@
 #!/bin/bash
 source /opt/ros/humble/setup.bash
 
-ros2 launch rtabmap_ros rtabmap.launch.py \
+ros2 launch rtabmap_launch rtabmap.launch.py \
 rtabmap_args:="--delete_db_on_start" \
 rviz:=false \
 rtabmapviz:=true \
