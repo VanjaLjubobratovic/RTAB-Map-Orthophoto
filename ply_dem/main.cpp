@@ -14,6 +14,18 @@
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/flann.hpp>
+#include <opencv2/core/eigen.hpp>
+
+#include <Eigen/Geometry>
+
+struct CameraPose {
+    Eigen::Isometry3d pose;
+    int id;
+
+    CameraPose(Eigen::Isometry3d pose, int id) 
+        : pose(pose), id(id){}
+
+};
 
 cv::Mat extractDataPoints(const cv::Mat& dem) {
     cv::Mat points;
@@ -156,8 +168,92 @@ void knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTre
     dem = interpolated;
 }
 
+std::vector<CameraPose> readPoses(const std::string& path) {
+    std::vector<CameraPose> cameraPoses;
+
+    std::ifstream file(path);
+    if(!file.is_open()) {
+        std::cerr << "Failed to open poses file " << path << std::endl;
+        return cameraPoses; 
+    }
+
+    //Skip first line with format definition
+    std::string line;
+    std::getline(file, line);
+
+    double x, y, z, qx, qy, qz, qw;
+    double timestamp;
+    int id;
+    while(file >> timestamp >> x >> y >> z >> qx >> qy >> qz >> qw >> id) {
+
+        Eigen::Isometry3d pose;
+
+        Eigen::Vector3d translation(x, y, z);
+        Eigen::Quaternion rotation(qw, qx, qy, qz);
+
+        pose = Eigen::Isometry3d::Identity();
+        pose.translation() = translation;
+        pose.linear() = rotation.toRotationMatrix();
+
+        cameraPoses.push_back(CameraPose(pose, id));
+    }
+
+    file.close();
+    return cameraPoses;
+}
+
+cv::Mat warpImage(const cv::Mat& image, const CameraPose& cameraPose, const cv::Mat& dem) {
+    //---INVERSE CAMERA TRANSFORM---
+    cv::Mat warpedImage;
+    cv::Mat transformMatrix(3, 3, CV_64F);
+
+    auto eigenMat = cameraPose.pose.matrix();
+
+    for(int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            transformMatrix.at<float>(i, j) = eigenMat(i, j);
+        }
+    }
+
+    cv::warpPerspective(image, warpedImage, transformMatrix, image.size(), cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar());
+
+    return warpedImage;
+}
+
+std::vector<cv::Mat> readImages(const std::string& path, std::vector<CameraPose>& poses) {
+    std::vector<cv::Mat> images;
+
+    for(auto pose : poses) {
+        std::string pathToImg = path + std::to_string(pose.id) + ".jpg";
+
+        cv::Mat image = cv::imread(pathToImg, cv::IMREAD_COLOR);
+
+        if(image.empty()) {
+            std::cerr << "Error reading image with ID: " << pose.id << "\n";
+            std::cerr << pathToImg << std::endl;
+        }
+
+        images.push_back(image);
+    }
+
+    std::cout << "Done reading images" << std::endl;
+
+    return images;
+}
+
+std::vector<cv::Mat> warpImages(const std::vector<cv::Mat>& rgbImages, const std::vector<CameraPose>& poses, const cv::Mat& dem) {
+    std::vector<cv::Mat> warpedImages;
+
+    for(int i = 0; i < rgbImages.size(); i++)
+        warpedImages.push_back(warpImage(rgbImages[i], poses[i], dem));
+
+    return warpedImages;
+}
+
 int main(int, char**){
-    std::string plyPath = "/home/vanja/Desktop/CLOUD/livingroom/livingroom.ply";
+    std::string plyPath = "/home/vanja/Desktop/CLOUD/livingroom2/livingroom2.ply";
+    std::string posesPath = "/home/vanja/Desktop/CLOUD/livingroom2/poses.txt";
+    std::string imagesPath = "/home/vanja/Desktop/CLOUD/livingroom2/rgb/";
     //std::string plyPath = "/home/vanja/Desktop/CLOUD/rgbd-scenes-v2/pc/09.ply";
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -236,9 +332,22 @@ int main(int, char**){
     cv::normalize(heightmap, heightmap, 0, 255, cv::NORM_MINMAX, CV_8U);
     cv::imwrite("../outputDem.jpg", heightmap);
     cout << "DEM saved to file!" << endl;
+    //cv::waitKey(0);
+
+    //---LOADING CAMERA POSES---
+    std::vector<CameraPose> cameraPoses = readPoses(posesPath);
+
+    //---LOADING IMAGES---
+    std::vector<cv::Mat> rgbImages = readImages(imagesPath, cameraPoses);
+
+    //---WARPING IMAGES---
+    std::vector<cv::Mat> warpedImages = warpImages(rgbImages, cameraPoses, heightmap);
+
+    cv::imshow("Warped image 1", warpedImages[0]);
     cv::waitKey(0);
 
-    
+    //---GENERATING MOSAIC---
+    cv::Mat orthomosaic(heightmap.rows, heightmap.cols, CV_32FC3, cv::Scalar(0, 0, 0));
 
     filtrationViz(cloud_filtered, cloud);
     return 0;
