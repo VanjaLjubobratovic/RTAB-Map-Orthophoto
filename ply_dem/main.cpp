@@ -96,9 +96,9 @@ void filtrationViz(pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered, pcl::PointCl
     viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "raw_cloud");
     viewer->addCoordinateSystem (1.0);
 
-    viewer->setCameraPosition(centroid.x, centroid.y, centroid.z + 10,
+    /*viewer->setCameraPosition(centroid.x, centroid.y, centroid.z + 10,
                               centroid.x, centroid.y, centroid.z,
-                              0, -1, 0);
+                              0, -1, 0);*/
 
     while(!viewer->wasStopped()) {
         viewer->spin();
@@ -241,19 +241,10 @@ std::vector<cv::Mat> readImages(const std::string& path, std::vector<CameraPose>
     return images;
 }
 
-std::vector<cv::Mat> warpImages(const std::vector<cv::Mat>& rgbImages, const std::vector<CameraPose>& poses, const cv::Mat& dem) {
-    std::vector<cv::Mat> warpedImages;
-
-    for(int i = 0; i < rgbImages.size(); i++)
-        warpedImages.push_back(warpImage(rgbImages[i], poses[i], dem));
-
-    return warpedImages;
-}
-
 int main(int, char**){
-    std::string plyPath = "/home/vanja/Desktop/CLOUD/livingroom2/livingroom2.ply";
-    std::string posesPath = "/home/vanja/Desktop/CLOUD/livingroom2/poses.txt";
-    std::string imagesPath = "/home/vanja/Desktop/CLOUD/livingroom2/rgb/";
+    std::string plyPath = "/home/vanja/Desktop/cloudExportTest/cloud1.ply";
+    std::string posesPath = "/home/vanja/Desktop/cloudExportTest/poses.txt";
+    std::string imagesPath = "/home/vanja/Desktop/cloudExportTest/rgb/";
     //std::string plyPath = "/home/vanja/Desktop/CLOUD/rgbd-scenes-v2/pc/09.ply";
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -261,6 +252,8 @@ int main(int, char**){
         cerr << "ERROR: Unable to load PLY file." << endl;
         return -1;
     }
+
+    
 
 
     //TODO: REMOVE THIS, DATASET IS UPSIDE DOWN FOR SOME REASON AND ALSO TILTED
@@ -315,7 +308,7 @@ int main(int, char**){
         }
     }
 
-    cv::flip(heightmap, heightmap, 0); //Flip along X-axis (row and col calculation flips image)
+    //cv::flip(heightmap, heightmap, 0); //Flip along X-axis (row and col calculation flips image)
 
     cout << "Done generating heightmap" << endl;
     
@@ -323,7 +316,7 @@ int main(int, char**){
     cout << "Starting interpolation" << endl;
     cv::Mat dataPoints = extractDataPoints(heightmap); //We build kd-tree only with non-NaN points
     cv::flann::Index kdTree = buildKDTree(dataPoints); //kd-tree build
-    nearestNeighbourInterpolation(heightmap, dataPoints, kdTree, 10); // interpolation
+    //nearestNeighbourInterpolation(heightmap, dataPoints, kdTree, 10); // interpolation
     //knnInterpolation(heightmap, dataPoints, kdTree, 10, 5, 4.0);
     cout << "Done interpolating" << endl;
 
@@ -340,15 +333,64 @@ int main(int, char**){
     //---LOADING IMAGES---
     std::vector<cv::Mat> rgbImages = readImages(imagesPath, cameraPoses);
 
-    //---WARPING IMAGES---
-    std::vector<cv::Mat> warpedImages = warpImages(rgbImages, cameraPoses, heightmap);
-
-    cv::imshow("Warped image 1", warpedImages[0]);
-    cv::waitKey(0);
-
     //---GENERATING MOSAIC---
     cv::Mat orthomosaic(heightmap.rows, heightmap.cols, CV_32FC3, cv::Scalar(0, 0, 0));
+    for(int i = 0; i < orthomosaic.rows; i++) {
+        for(int j = 0; j < orthomosaic.cols; j++) {
+            pcl::PointXYZRGB Xz(i, j, heightmap.at<float>(i,j)); //Project mosaic point to DEM
+            auto pose = cameraPoses[0].pose.translation();
 
-    filtrationViz(cloud_filtered, cloud);
+            pcl::PointXYZ Pc((float)pose.x(), (float)pose.y(), (float)pose.z()); //Camera point in map frame
+
+            pcl::PointXYZ Pc_dem; //Camera point translation to DEM frame
+            Pc_dem.x = (max.x - Pc.x) / grid_resolution;
+            Pc_dem.y = (max.y - Pc.y) / grid_resolution;
+            Pc_dem.z = Pc.z;
+
+            /*  Image space -> camera space matrix
+                K = | fx   0    cx |
+                    | 0    fy   cy |
+                    | 0    0    1  |
+            */
+            double fx = 424.82;
+            double fy = 424.82;
+            double cx = 421.071;
+            double cy = 242.692;
+            cv::Mat cameraMatrix = (cv::Mat_<double>(3, 3) <<
+                fx, 0, cx,
+                0, fy, cy,
+                0, 0, 1);
+            
+
+            Eigen::Vector3d demEigen(Xz.x, Xz.y, Xz.z);
+            Eigen::Vector3d cameraEigen(Pc_dem.x, Pc_dem.y, Pc_dem.z);
+            Eigen::Vector3d demToCamera = cameraEigen - demEigen; //Line from DEM surface to camera point
+            demToCamera.normalize();
+
+            //Plane equation: Ax + By + Cz + D = 0
+            Eigen::Vector3d principalPoint = cameraPoses[0].pose * Eigen::Vector3d(0, 0, fx); //In map frame; (x, y, z)
+            principalPoint.x() = (max.x - principalPoint.x()) / grid_resolution;
+            principalPoint.y() = (max.y - principalPoint.y()) / grid_resolution; //DEM frame
+            Eigen::Vector3d imgPlaneNormal = cameraPoses[0].pose * Eigen::Vector3d(0, 0, 1); //In map frame; (A, B, C)
+            imgPlaneNormal.x() = (max.x - imgPlaneNormal.x()) / grid_resolution;
+            imgPlaneNormal.y() = (max.y - imgPlaneNormal.y()) / grid_resolution; //DEM frame
+            double D = -imgPlaneNormal.dot(principalPoint);
+
+            double t = (principalPoint - demEigen).dot(imgPlaneNormal) / demToCamera.dot(imgPlaneNormal);
+            Eigen::Vector3d intersectionPoint = demEigen + t * demToCamera; //In DEM frame
+            
+            //DEM -> map -> camera -> image
+            Eigen::Vector3d intersectionTransformed = intersectionPoint;
+            intersectionTransformed.x() = max.x - intersectionTransformed.x() * grid_resolution;
+            intersectionTransformed.y() = max.y - intersectionTransformed.y() * grid_resolution; //DEM -> map
+            intersectionTransformed = cameraPoses[0].pose.inverse() * intersectionPoint; //map -> camera
+            
+            cout << intersectionTransformed.x() << " " << intersectionTransformed.y() << " " << intersectionTransformed.z() << endl;
+        }
+    }
+
+
+
+    //filtrationViz(cloud_filtered, cloud);
     return 0;
 }
