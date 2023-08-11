@@ -27,29 +27,23 @@ struct CameraPose {
 
 };
 
-cv::Mat extractColorDataPoints(const cv::Mat& dem) {
-    cv::Mat points;
-
-    for (int i = 0; i < dem.rows; i++) {
-        for (int j = 0; j < dem.cols; j++) {
-            if(!std::isnan(dem.at<cv::Vec3f>(i, j)[0])) {
-                points.push_back(cv::Point2f(i, j));
-            }
-        }
-    }
-
-    points = points.reshape(1);
-    points.convertTo(points, CV_32F);
-
-    return points;
+template <typename T>
+bool isNaN(const T& value) {
+    return std::isnan(value);
 }
 
+template <>
+bool isNaN<cv::Vec3f>(const cv::Vec3f& value) {
+    return std::isnan(value[0]) || std::isnan(value[1]) || std::isnan(value[2]);
+}
+
+template <typename T>
 cv::Mat extractDataPoints(const cv::Mat& dem) {
     cv::Mat points;
 
     for (int i = 0; i < dem.rows; i++) {
         for (int j = 0; j < dem.cols; j++) {
-            if(!std::isnan(dem.at<float>(i, j))) {
+            if(!isNaN(dem.at<T>(i, j))) {
                 points.push_back(cv::Point2f(i, j));
             }
         }
@@ -122,12 +116,13 @@ void filtrationViz(pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered, pcl::PointCl
     }
 }
 
-void nearestNeighbourInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius) {
+template <typename T>
+void nearestNeighborInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius) {
     cv::Mat interpolated = dem.clone();
 
     for(int i = 0; i < dem.rows; i++) {
         for(int j = 0; j < dem.cols; j++) {
-            if(std::isnan(dem.at<float>(i, j))) {
+            if(isNaN(dem.at<T>(i, j))) {
                 std::vector<float> queryData = {(float) i, (float) j};
                 std::vector<int> indices;
                 std::vector<float> dists;
@@ -141,34 +136,7 @@ void nearestNeighbourInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann:
                 int nearest_i = dataPoints.at<cv::Point2f>(indices[0]).x;
                 int nearest_j = dataPoints.at<cv::Point2f>(indices[0]).y;
 
-                interpolated.at<float>(i, j) = dem.at<float>(nearest_i, nearest_j);
-            }
-        }
-    }
-
-    dem = interpolated;
-}
-
-void nearestNeighbourInterpolationColor(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius) {
-    cv::Mat interpolated = dem.clone();
-
-    for(int i = 0; i < dem.rows; i++) {
-        for(int j = 0; j < dem.cols; j++) {
-            if(std::isnan(dem.at<cv::Vec3f>(i, j)[0])) {
-                std::vector<float> queryData = {(float) i, (float) j};
-                std::vector<int> indices;
-                std::vector<float> dists;
-
-                kdTree.radiusSearch(queryData, indices, dists, searchRadius, 1, cv::flann::SearchParams()); //radius is in "pixels"
-
-                if(indices[0] == 0 && dists[0] == 0.0)
-                    continue; //No neighbour found
-
-                //I know that I is supposed to represent y axis, leave me alone
-                int nearest_i = dataPoints.at<cv::Point2f>(indices[0]).x;
-                int nearest_j = dataPoints.at<cv::Point2f>(indices[0]).y;
-
-                interpolated.at<cv::Vec3f>(i, j) = dem.at<cv::Vec3f>(nearest_i, nearest_j);
+                interpolated.at<T>(i, j) = dem.at<T>(nearest_i, nearest_j);
             }
         }
     }
@@ -285,10 +253,11 @@ std::vector<cv::Mat> readImages(const std::string& path, std::vector<CameraPose>
 }
 
 cv::Mat generateColorizedDem(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, double grid_resolution) {
-    /* This method generates the mosaic simply 
+    /* 
+        This method generates the mosaic simply 
         by projecting the pointcloud with its color 
-        information vertically to a ground plane */
-
+        information vertically to a ground plane
+    */
 
     pcl::PointXYZRGB min, max;
     pcl::getMinMax3D(*cloud, min, max);
@@ -297,7 +266,6 @@ cv::Mat generateColorizedDem(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, doubl
     int cols = ceil((max.x - min.x) / grid_resolution);
 
     cv::Mat heightmap(rows, cols, CV_32FC3, cv::Scalar::all(std::numeric_limits<float>::quiet_NaN()));
-
 
     for(const auto& point : cloud->points){
         int col = ((max.x - point.x) / grid_resolution);
@@ -327,10 +295,7 @@ int main(int, char**){
         return -1;
     }
 
-    
-
-
-    //TODO: REMOVE THIS, DATASET IS UPSIDE DOWN FOR SOME REASON AND ALSO TILTED
+    //This is cs correction for rgbd-scenes-v2 dataset
     /*for (int i = 0; i < cloud->size(); i++) {
         //Swapping y and z axis and changing z axis direction
         float tmp = cloud->points[i].y;
@@ -349,13 +314,8 @@ int main(int, char**){
     sor.setInputCloud(cloud);
     sor.setMeanK(50); // Number of neighbors to use for mean distance estimation
     sor.setStddevMulThresh(0.3); // Standard deviation multiplier for distance thresholding
-
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
     sor.filter(*cloud_filtered);
-
-
-    //TODO: I'm not filtering because dataset is high quality
-    //cloud_filtered = cloud;
 
 
     //---GENERATING DEM---
@@ -381,35 +341,34 @@ int main(int, char**){
             }
         }
     }
-
     cout << "Done generating heightmap" << endl;
     
     //---INTERPOLATION---
     cout << "Starting interpolation" << endl;
-    cv::Mat dataPoints = extractDataPoints(heightmap); //We build kd-tree only with non-NaN points
+    cv::Mat dataPoints = extractDataPoints<float>(heightmap); //We build kd-tree only with non-NaN points
     cv::flann::Index kdTree = buildKDTree(dataPoints); //kd-tree build
-    //nearestNeighbourInterpolation(heightmap, dataPoints, kdTree, 10); // interpolation
+    //nearestNeighbourInterpolation<float>(heightmap, dataPoints, kdTree, 10); // interpolation
     //knnInterpolation(heightmap, dataPoints, kdTree, 10, 5, 4.0);
     cout << "Done interpolating" << endl;
-
-    auto colorizedDem = generateColorizedDem(cloud_filtered, 0.005);
-    auto dataPoints2 = extractColorDataPoints(colorizedDem);
-    auto kdTree2 = buildKDTree(dataPoints);
-    nearestNeighbourInterpolationColor(colorizedDem, dataPoints2, kdTree2, 10);
-    cv::normalize(colorizedDem, colorizedDem, 0, 255, cv::NORM_MINMAX, CV_8U);
-    cv::imwrite("../colorizedDem.jpg", colorizedDem);
-
-
-    //---SHOW FINAL RESULT---
-    //cv::normalize(heightmap, heightmap, 0, 255, cv::NORM_MINMAX, CV_8U);
+    cv::normalize(heightmap, heightmap, 0, 255, cv::NORM_MINMAX, CV_8U);
     cv::imwrite("../outputDem.jpg", heightmap);
     cout << "DEM saved to file!" << endl;
 
+
+    //---GENERATING MOSAIC METHOD 1---
+    auto mosaic = generateColorizedDem(cloud_filtered, 0.005);
+    auto mosaicDataPoints = extractDataPoints<cv::Vec3f>(mosaic);
+    auto mosaicKdTree = buildKDTree(mosaicDataPoints);
+    nearestNeighborInterpolation<cv::Vec3f>(mosaic, mosaicDataPoints, mosaicKdTree, 10);
+    cv::normalize(mosaic, mosaic, 0, 255, cv::NORM_MINMAX, CV_8U);
+    cv::imwrite("../colorizedDem.jpg", mosaic);
+    
+
     //---LOADING CAMERA POSES---
-    //std::vector<CameraPose> cameraPoses = readPoses(posesPath);
+    std::vector<CameraPose> cameraPoses = readPoses(posesPath);
 
     //---LOADING IMAGES---
-    //std::vector<cv::Mat> rgbImages = readImages(imagesPath, cameraPoses);
+    std::vector<cv::Mat> rgbImages = readImages(imagesPath, cameraPoses);
 
     // std::ofstream outputFile("../points");
     // if (!outputFile.is_open()) {
@@ -495,15 +454,10 @@ int main(int, char**){
     //         intersectionTransformed = cameraPoses[0].pose.inverse() * intersectionPoint; //map -> camera
     //        
     //         //cout << intersectionTransformed.x() << " " << intersectionTransformed.y() << " " << intersectionTransformed.z() << endl;*/
-    //
-    //
     //     }
     // }
     //
     // outputFile.close();
 
-
-
-    //filtrationViz(cloud_filtered, cloud);
     return 0;
 }
