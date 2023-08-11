@@ -27,6 +27,23 @@ struct CameraPose {
 
 };
 
+cv::Mat extractColorDataPoints(const cv::Mat& dem) {
+    cv::Mat points;
+
+    for (int i = 0; i < dem.rows; i++) {
+        for (int j = 0; j < dem.cols; j++) {
+            if(!std::isnan(dem.at<cv::Vec3f>(i, j)[0])) {
+                points.push_back(cv::Point2f(i, j));
+            }
+        }
+    }
+
+    points = points.reshape(1);
+    points.convertTo(points, CV_32F);
+
+    return points;
+}
+
 cv::Mat extractDataPoints(const cv::Mat& dem) {
     cv::Mat points;
 
@@ -132,6 +149,32 @@ void nearestNeighbourInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann:
     dem = interpolated;
 }
 
+void nearestNeighbourInterpolationColor(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius) {
+    cv::Mat interpolated = dem.clone();
+
+    for(int i = 0; i < dem.rows; i++) {
+        for(int j = 0; j < dem.cols; j++) {
+            if(std::isnan(dem.at<cv::Vec3f>(i, j)[0])) {
+                std::vector<float> queryData = {(float) i, (float) j};
+                std::vector<int> indices;
+                std::vector<float> dists;
+
+                kdTree.radiusSearch(queryData, indices, dists, searchRadius, 1, cv::flann::SearchParams()); //radius is in "pixels"
+
+                if(indices[0] == 0 && dists[0] == 0.0)
+                    continue; //No neighbour found
+
+                //I know that I is supposed to represent y axis, leave me alone
+                int nearest_i = dataPoints.at<cv::Point2f>(indices[0]).x;
+                int nearest_j = dataPoints.at<cv::Point2f>(indices[0]).y;
+
+                interpolated.at<cv::Vec3f>(i, j) = dem.at<cv::Vec3f>(nearest_i, nearest_j);
+            }
+        }
+    }
+
+    dem = interpolated;
+}
 
 void knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int nNeighbors, float p) {
     cv::Mat interpolated = dem.clone();
@@ -241,8 +284,39 @@ std::vector<cv::Mat> readImages(const std::string& path, std::vector<CameraPose>
     return images;
 }
 
+cv::Mat generateColorizedDem(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, double grid_resolution) {
+    /* This method generates the mosaic simply 
+        by projecting the pointcloud with its color 
+        information vertically to a ground plane */
+
+
+    pcl::PointXYZRGB min, max;
+    pcl::getMinMax3D(*cloud, min, max);
+
+    int rows = ceil((max.y - min.y) / grid_resolution);
+    int cols = ceil((max.x - min.x) / grid_resolution);
+
+    cv::Mat heightmap(rows, cols, CV_32FC3, cv::Scalar::all(std::numeric_limits<float>::quiet_NaN()));
+
+
+    for(const auto& point : cloud->points){
+        int col = ((max.x - point.x) / grid_resolution);
+        int row = ((max.y - point.y) / grid_resolution);
+
+        if(col >= 0 && col < cols && row >= 0 && row < rows) {
+            if(isnan(heightmap.at<cv::Vec3f>(row, col)[0]) || point.z > heightmap.at<cv::Vec3f>(row, col)[0]){
+                //heightmap.at<float>(row, col) = point.z;
+                heightmap.at<cv::Vec3f>(row, col) = cv::Vec3f(point.b, point.g, point.r); //Yeah, opencv is weird, it's BGR
+            }
+        }
+    }
+
+    return heightmap;
+}
+
 int main(int, char**){
-    std::string plyPath = "/home/vanja/Desktop/cloudExportTest/cloud1.ply";
+    //std::string plyPath = "/home/vanja/Desktop/cloudExportTest/cloud9.ply";
+    std::string plyPath = "/home/vanja/Desktop/CLOUD/livingroom/livingroom.ply";
     std::string posesPath = "/home/vanja/Desktop/cloudExportTest/poses.txt";
     std::string imagesPath = "/home/vanja/Desktop/cloudExportTest/rgb/";
     //std::string plyPath = "/home/vanja/Desktop/CLOUD/rgbd-scenes-v2/pc/09.ply";
@@ -308,8 +382,6 @@ int main(int, char**){
         }
     }
 
-    //cv::flip(heightmap, heightmap, 0); //Flip along X-axis (row and col calculation flips image)
-
     cout << "Done generating heightmap" << endl;
     
     //---INTERPOLATION---
@@ -320,74 +392,115 @@ int main(int, char**){
     //knnInterpolation(heightmap, dataPoints, kdTree, 10, 5, 4.0);
     cout << "Done interpolating" << endl;
 
+    auto colorizedDem = generateColorizedDem(cloud_filtered, 0.005);
+    auto dataPoints2 = extractColorDataPoints(colorizedDem);
+    auto kdTree2 = buildKDTree(dataPoints);
+    nearestNeighbourInterpolationColor(colorizedDem, dataPoints2, kdTree2, 10);
+    cv::normalize(colorizedDem, colorizedDem, 0, 255, cv::NORM_MINMAX, CV_8U);
+    cv::imwrite("../colorizedDem.jpg", colorizedDem);
+
 
     //---SHOW FINAL RESULT---
-    cv::normalize(heightmap, heightmap, 0, 255, cv::NORM_MINMAX, CV_8U);
+    //cv::normalize(heightmap, heightmap, 0, 255, cv::NORM_MINMAX, CV_8U);
     cv::imwrite("../outputDem.jpg", heightmap);
     cout << "DEM saved to file!" << endl;
-    //cv::waitKey(0);
 
     //---LOADING CAMERA POSES---
-    std::vector<CameraPose> cameraPoses = readPoses(posesPath);
+    //std::vector<CameraPose> cameraPoses = readPoses(posesPath);
 
     //---LOADING IMAGES---
-    std::vector<cv::Mat> rgbImages = readImages(imagesPath, cameraPoses);
+    //std::vector<cv::Mat> rgbImages = readImages(imagesPath, cameraPoses);
 
-    //---GENERATING MOSAIC---
-    cv::Mat orthomosaic(heightmap.rows, heightmap.cols, CV_32FC3, cv::Scalar(0, 0, 0));
-    for(int i = 0; i < orthomosaic.rows; i++) {
-        for(int j = 0; j < orthomosaic.cols; j++) {
-            pcl::PointXYZRGB Xz(i, j, heightmap.at<float>(i,j)); //Project mosaic point to DEM
-            auto pose = cameraPoses[0].pose.translation();
-
-            pcl::PointXYZ Pc((float)pose.x(), (float)pose.y(), (float)pose.z()); //Camera point in map frame
-
-            pcl::PointXYZ Pc_dem; //Camera point translation to DEM frame
-            Pc_dem.x = (max.x - Pc.x) / grid_resolution;
-            Pc_dem.y = (max.y - Pc.y) / grid_resolution;
-            Pc_dem.z = Pc.z;
-
-            /*  Image space -> camera space matrix
-                K = | fx   0    cx |
-                    | 0    fy   cy |
-                    | 0    0    1  |
-            */
-            double fx = 424.82;
-            double fy = 424.82;
-            double cx = 421.071;
-            double cy = 242.692;
-            cv::Mat cameraMatrix = (cv::Mat_<double>(3, 3) <<
-                fx, 0, cx,
-                0, fy, cy,
-                0, 0, 1);
-            
-
-            Eigen::Vector3d demEigen(Xz.x, Xz.y, Xz.z);
-            Eigen::Vector3d cameraEigen(Pc_dem.x, Pc_dem.y, Pc_dem.z);
-            Eigen::Vector3d demToCamera = cameraEigen - demEigen; //Line from DEM surface to camera point
-            demToCamera.normalize();
-
-            //Plane equation: Ax + By + Cz + D = 0
-            Eigen::Vector3d principalPoint = cameraPoses[0].pose * Eigen::Vector3d(0, 0, fx); //In map frame; (x, y, z)
-            principalPoint.x() = (max.x - principalPoint.x()) / grid_resolution;
-            principalPoint.y() = (max.y - principalPoint.y()) / grid_resolution; //DEM frame
-            Eigen::Vector3d imgPlaneNormal = cameraPoses[0].pose * Eigen::Vector3d(0, 0, 1); //In map frame; (A, B, C)
-            imgPlaneNormal.x() = (max.x - imgPlaneNormal.x()) / grid_resolution;
-            imgPlaneNormal.y() = (max.y - imgPlaneNormal.y()) / grid_resolution; //DEM frame
-            double D = -imgPlaneNormal.dot(principalPoint);
-
-            double t = (principalPoint - demEigen).dot(imgPlaneNormal) / demToCamera.dot(imgPlaneNormal);
-            Eigen::Vector3d intersectionPoint = demEigen + t * demToCamera; //In DEM frame
-            
-            //DEM -> map -> camera -> image
-            Eigen::Vector3d intersectionTransformed = intersectionPoint;
-            intersectionTransformed.x() = max.x - intersectionTransformed.x() * grid_resolution;
-            intersectionTransformed.y() = max.y - intersectionTransformed.y() * grid_resolution; //DEM -> map
-            intersectionTransformed = cameraPoses[0].pose.inverse() * intersectionPoint; //map -> camera
-            
-            cout << intersectionTransformed.x() << " " << intersectionTransformed.y() << " " << intersectionTransformed.z() << endl;
-        }
-    }
+    // std::ofstream outputFile("../points");
+    // if (!outputFile.is_open()) {
+    //     std::cerr << "Error: Failed to open output file." << std::endl;
+    //     return 1;  // Return an error code
+    // }
+    //
+    // //---GENERATING MOSAIC---
+    // cv::Mat orthomosaic(heightmap.rows, heightmap.cols, CV_32FC3, cv::Scalar(0, 0, 0));
+    // for(int i = 0; i < orthomosaic.rows; i++) {
+    //     for(int j = 0; j < orthomosaic.cols; j++) {
+    //         if(std::isnan(heightmap.at<float>(i,j)))
+    //             continue;
+    //
+    //         pcl::PointXYZRGB Xz(i, j, heightmap.at<float>(i,j)); //Project mosaic point to DEM
+    //         /*auto pose = cameraPoses[0].pose.translation();
+    //
+    //         pcl::PointXYZ Pc((float)pose.x(), (float)pose.y(), (float)pose.z()); //Camera point in map frame
+    //
+    //         pcl::PointXYZ Pc_dem; //Camera point translation to DEM frame
+    //         Pc_dem.x = (max.x - Pc.x) / grid_resolution;
+    //         Pc_dem.y = (max.y - Pc.y) / grid_resolution;
+    //         Pc_dem.z = Pc.z;*/
+    //
+    //         /*  Image space -> camera space matrix
+    //             K = | fx   0    cx |
+    //                 | 0    fy   cy |
+    //                 | 0    0    1  |
+    //         */
+    //         double fx = 424.82;
+    //         double fy = 424.82;
+    //         double cx = 421.071;
+    //         double cy = 242.692;
+    //         cv::Mat intrinsicMatrix = (cv::Mat_<double>(3, 3) <<
+    //             fx, 0, cx,
+    //             0, fy, cy, 
+    //             0, 0, 1);
+    //         Eigen::Matrix4d intrinsicMatrixEigen;
+    //         Eigen::Matrix4d calibrationEigen = Eigen::Matrix4d::Identity();
+    //         cv::cv2eigen(intrinsicMatrix, intrinsicMatrixEigen);
+    //
+    //         Eigen::Matrix4d rotation = cameraPoses[0].pose.linear().matrix();
+    //         Eigen::Matrix4d translation = -cameraPoses[0].pose.translation().matrix();
+    //
+    //         calibrationEigen.block<3, 1>(0, 3) = translation;
+    //
+    //         std::cout << calibrationEigen << "\n-----" << std::endl;
+    //
+    //         auto cameraMatrix = intrinsicMatrixEigen * rotation * calibrationEigen;
+    //      
+    //
+    //         Eigen::Vector4d demEigen(Xz.x, Xz.y, Xz.z, 1.0); //Converting pcl::PointXYZRGB to Eigen
+    //         demEigen[0] = max.x - demEigen[0] * grid_resolution;
+    //         demEigen[1] = max.y - demEigen[1] * grid_resolution; //to world space
+    //         //Eigen::Vector3d cameraEigen(Pc_dem.x, Pc_dem.y, Pc_dem.z);
+    //         //Eigen::Vector3d demToCamera = cameraEigen - demEigen; //Line from DEM surface to camera point
+    //         //demToCamera.normalize();
+    //
+    //         Eigen::Vector4d imagePoint = cameraMatrix * demEigen;
+    //         outputFile << imagePoint << "\n-------" << std::endl;
+    //
+    //         //std::cout << Pc << " || " << max << "\n------------" << std::endl;
+    //         //std::cout << Pc_dem << std::endl;
+    //
+    //         //Plane equation: Ax + By + Cz + D = 0
+    //         /*Eigen::Vector3d principalPoint = cameraPoses[0].pose * Eigen::Vector3d(0, 0, fx); //In map frame; (x, y, z)
+    //         principalPoint.x() = (max.x - principalPoint.x()) / grid_resolution;
+    //         principalPoint.y() = (max.y - principalPoint.y()) / grid_resolution; //DEM frame
+    //         Eigen::Vector3d imgPlaneNormal = cameraPoses[0].pose * Eigen::Vector3d(0, 0, 1); //In map frame; (A, B, C)
+    //         imgPlaneNormal.x() = (max.x - imgPlaneNormal.x()) / grid_resolution;
+    //         imgPlaneNormal.y() = (max.y - imgPlaneNormal.y()) / grid_resolution; //DEM frame
+    //         double D = -imgPlaneNormal.dot(principalPoint);
+    //
+    //         double t = (principalPoint - demEigen).dot(imgPlaneNormal) / demToCamera.dot(imgPlaneNormal);
+    //         Eigen::Vector3d intersectionPoint = demEigen + t * demToCamera; //In DEM frame
+    //
+    //         std::cout << principalPoint << "\n----------" << std::endl;
+    //       
+    //         //DEM -> map -> camera -> image
+    //         Eigen::Vector3d intersectionTransformed = intersectionPoint;
+    //         intersectionTransformed.x() = max.x - intersectionTransformed.x() * grid_resolution;
+    //         intersectionTransformed.y() = max.y - intersectionTransformed.y() * grid_resolution; //DEM -> map 
+    //         intersectionTransformed = cameraPoses[0].pose.inverse() * intersectionPoint; //map -> camera
+    //        
+    //         //cout << intersectionTransformed.x() << " " << intersectionTransformed.y() << " " << intersectionTransformed.z() << endl;*/
+    //
+    //
+    //     }
+    // }
+    //
+    // outputFile.close();
 
 
 
