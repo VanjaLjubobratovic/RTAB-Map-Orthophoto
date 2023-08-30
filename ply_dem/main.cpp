@@ -284,7 +284,7 @@ cv::Mat generateColorizedDem(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, doubl
 
 int main(int, char**){
     //std::string plyPath = "/home/vanja/Desktop/cloudExportTest/cloud9.ply";
-    std::string plyPath = "/home/vanja/Desktop/CLOUD/livingroom/livingroom.ply";
+    std::string plyPath = "/home/vanja/Desktop/CLOUD/livingroom4/cloud.ply";
     std::string posesPath = "/home/vanja/Desktop/cloudExportTest/poses.txt";
     std::string imagesPath = "/home/vanja/Desktop/cloudExportTest/rgb/";
     //std::string plyPath = "/home/vanja/Desktop/CLOUD/rgbd-scenes-v2/pc/09.ply";
@@ -359,9 +359,13 @@ int main(int, char**){
     auto mosaic = generateColorizedDem(cloud_filtered, 0.005);
     auto mosaicDataPoints = extractDataPoints<cv::Vec3f>(mosaic);
     auto mosaicKdTree = buildKDTree(mosaicDataPoints);
-    nearestNeighborInterpolation<cv::Vec3f>(mosaic, mosaicDataPoints, mosaicKdTree, 10);
+    //nearestNeighborInterpolation<cv::Vec3f>(mosaic, mosaicDataPoints, mosaicKdTree, 10);
     cv::normalize(mosaic, mosaic, 0, 255, cv::NORM_MINMAX, CV_8U);
     cv::imwrite("../colorizedDem.jpg", mosaic);
+
+    //filtrationViz(cloud_filtered, cloud);
+
+    //---NATURAL NEIGHBOR INTERPOLATION---
     
 
     //---LOADING CAMERA POSES---
@@ -458,6 +462,8 @@ int main(int, char**){
     // }
     //
     // outputFile.close();
+
+    filtrationViz(cloud_filtered, cloud);
 
     return 0;
 }
