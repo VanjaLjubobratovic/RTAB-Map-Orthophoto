@@ -159,19 +159,26 @@ void knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTre
                 if(indices[0] == 0 && dists[0] == 0.0)
                     continue; //No neighbours found*/
 
-                float numerator = 0;
-                float denominator = 0;
+                cv::Vec3f numerator = cv::Vec3f::all(0.0f);
+                cv::Vec3f denominator = cv::Vec3f::all(0.0f);
 
                 for(int k = 0; k < indices.size(); k++) {
+                    if(dists[k] == 0) 
+                        continue;
+
                     int n_i = dataPoints.at<cv::Point2f>(indices[k]).x;
                     int n_j = dataPoints.at<cv::Point2f>(indices[k]).y;
 
+                    cv::Vec3f u_i = dem.at<cv::Vec3f>(n_i, n_j);
                     float wi = 1.0 / pow(dists[k], p);
-                    numerator += wi * dem.at<float>(n_i, n_j);
-                    denominator += wi;
+                    numerator += wi * u_i;
+                    denominator += cv::Vec3f::all(wi);
                 }
 
-                interpolated.at<float>(i, j) = numerator / denominator;
+                cv::Vec3f result;
+                cv::divide(numerator, denominator, result);
+
+                interpolated.at<cv::Vec3f>(i, j) = result;
             }
         }
     }
@@ -357,11 +364,21 @@ int main(int, char**){
 
     //---GENERATING MOSAIC METHOD 1---
     auto mosaic = generateColorizedDem(cloud_filtered, 0.005);
+    auto mosaicNN = mosaic.clone();
+    auto mosaicKNN = mosaic.clone();
+
     auto mosaicDataPoints = extractDataPoints<cv::Vec3f>(mosaic);
     auto mosaicKdTree = buildKDTree(mosaicDataPoints);
-    //nearestNeighborInterpolation<cv::Vec3f>(mosaic, mosaicDataPoints, mosaicKdTree, 10);
+
+    nearestNeighborInterpolation<cv::Vec3f>(mosaicNN, mosaicDataPoints, mosaicKdTree, 10);
+    knnInterpolation(mosaicKNN, mosaicDataPoints, mosaicKdTree, 10, 5, 4.0);
+
     cv::normalize(mosaic, mosaic, 0, 255, cv::NORM_MINMAX, CV_8U);
+    cv::normalize(mosaicNN, mosaicNN, 0, 255, cv::NORM_MINMAX, CV_8U);
+    cv::normalize(mosaicKNN, mosaicKNN, 0, 255, cv::NORM_MINMAX, CV_8U);
     cv::imwrite("../colorizedDem.jpg", mosaic);
+    cv::imwrite("../colorizedDemNN.jpg", mosaicNN);
+    cv::imwrite("../colorizedDemKNN.jpg", mosaicKNN);
 
     //filtrationViz(cloud_filtered, cloud);
 
@@ -462,8 +479,6 @@ int main(int, char**){
     // }
     //
     // outputFile.close();
-
-    filtrationViz(cloud_filtered, cloud);
 
     return 0;
 }
