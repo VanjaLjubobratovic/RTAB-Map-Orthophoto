@@ -289,9 +289,72 @@ cv::Mat generateColorizedDem(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, doubl
     return heightmap;
 }
 
+//--------------------------------------------------
+struct Voxel {
+    int datapoints = 0;
+
+    cv::Vec3f pointBGR{cv::Vec3f::all(std::numeric_limits<float>::quiet_NaN())};
+
+    void addPoint(pcl::PointXYZRGB* point) {
+        if(!datapoints) {
+            pointBGR = cv::Vec3f(point->b, point->g, point->r);
+        } else {
+            pointBGR *= datapoints;
+            pointBGR += cv::Vec3f(point->b, point->g, point->r);
+        }
+
+        datapoints++;
+        pointBGR /= datapoints;
+    }
+};
+
+typedef std::vector<std::vector<std::vector<Voxel>>> Tensor;
+
+Voxel findTop(std::vector<Voxel> voxelStack) {
+    for(auto voxel : voxelStack) {
+        if(voxel.datapoints != 0)
+            return voxel;
+    }
+
+    return voxelStack[0];
+}
+
+cv::Mat voxelizeCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, double grid_resolution) {
+    pcl::PointXYZRGB min, max;
+    pcl::getMinMax3D(*cloud, min, max);
+
+    int xSize = ceil((max.x - min.x) / grid_resolution);
+    int ySize = ceil((max.y - min.y) / grid_resolution);
+    int zSize = ceil((max.z - min.z) / grid_resolution);
+
+    std::cout << cv::Vec3f(xSize, ySize, zSize) << std::endl;
+
+    Tensor tensor(ySize, std::vector<std::vector<Voxel>>(xSize, std::vector<Voxel>(zSize)));
+
+    for(auto point : cloud->points) {
+        int x = ((max.x - point.x) / grid_resolution);
+        int y = ((max.y - point.y) / grid_resolution);
+        int z = ((max.z - point.z) / grid_resolution);
+
+        tensor[y][x][z].addPoint(&point);
+    }
+
+    cv::Mat raster(ySize, xSize, CV_32FC3, cv::Scalar::all(std::numeric_limits<float>::quiet_NaN()));
+
+    for(int i = 0; i < ySize; i++) {
+        for(int j = 0; j < xSize; j++) {
+            auto projection = findTop(tensor[i][j]).pointBGR;
+            raster.at<cv::Vec3f>(i, j) = projection;
+        }
+    }
+
+    return raster;
+}
+//--------------------------------------------------
+
 int main(int, char**){
     //std::string plyPath = "/home/vanja/Desktop/cloudExportTest/cloud9.ply";
-    std::string plyPath = "/home/vanja/Desktop/CLOUD/livingroom4/cloud.ply";
+    std::string plyPath = "/home/vanja/Desktop/CLOUD/livingroom5/cloud.ply";
     std::string posesPath = "/home/vanja/Desktop/cloudExportTest/poses.txt";
     std::string imagesPath = "/home/vanja/Desktop/cloudExportTest/rgb/";
     //std::string plyPath = "/home/vanja/Desktop/CLOUD/rgbd-scenes-v2/pc/09.ply";
@@ -363,7 +426,8 @@ int main(int, char**){
 
 
     //---GENERATING MOSAIC METHOD 1---
-    auto mosaic = generateColorizedDem(cloud_filtered, 0.005);
+    //auto mosaic = generateColorizedDem(cloud_filtered, 0.005);
+    auto mosaic = voxelizeCloud(cloud_filtered, grid_resolution);
     auto mosaicNN = mosaic.clone();
     auto mosaicKNN = mosaic.clone();
 
@@ -382,7 +446,6 @@ int main(int, char**){
 
     //filtrationViz(cloud_filtered, cloud);
 
-    //---NATURAL NEIGHBOR INTERPOLATION---
     
 
     //---LOADING CAMERA POSES---
@@ -391,94 +454,7 @@ int main(int, char**){
     //---LOADING IMAGES---
     std::vector<cv::Mat> rgbImages = readImages(imagesPath, cameraPoses);
 
-    // std::ofstream outputFile("../points");
-    // if (!outputFile.is_open()) {
-    //     std::cerr << "Error: Failed to open output file." << std::endl;
-    //     return 1;  // Return an error code
-    // }
-    //
-    // //---GENERATING MOSAIC---
-    // cv::Mat orthomosaic(heightmap.rows, heightmap.cols, CV_32FC3, cv::Scalar(0, 0, 0));
-    // for(int i = 0; i < orthomosaic.rows; i++) {
-    //     for(int j = 0; j < orthomosaic.cols; j++) {
-    //         if(std::isnan(heightmap.at<float>(i,j)))
-    //             continue;
-    //
-    //         pcl::PointXYZRGB Xz(i, j, heightmap.at<float>(i,j)); //Project mosaic point to DEM
-    //         /*auto pose = cameraPoses[0].pose.translation();
-    //
-    //         pcl::PointXYZ Pc((float)pose.x(), (float)pose.y(), (float)pose.z()); //Camera point in map frame
-    //
-    //         pcl::PointXYZ Pc_dem; //Camera point translation to DEM frame
-    //         Pc_dem.x = (max.x - Pc.x) / grid_resolution;
-    //         Pc_dem.y = (max.y - Pc.y) / grid_resolution;
-    //         Pc_dem.z = Pc.z;*/
-    //
-    //         /*  Image space -> camera space matrix
-    //             K = | fx   0    cx |
-    //                 | 0    fy   cy |
-    //                 | 0    0    1  |
-    //         */
-    //         double fx = 424.82;
-    //         double fy = 424.82;
-    //         double cx = 421.071;
-    //         double cy = 242.692;
-    //         cv::Mat intrinsicMatrix = (cv::Mat_<double>(3, 3) <<
-    //             fx, 0, cx,
-    //             0, fy, cy, 
-    //             0, 0, 1);
-    //         Eigen::Matrix4d intrinsicMatrixEigen;
-    //         Eigen::Matrix4d calibrationEigen = Eigen::Matrix4d::Identity();
-    //         cv::cv2eigen(intrinsicMatrix, intrinsicMatrixEigen);
-    //
-    //         Eigen::Matrix4d rotation = cameraPoses[0].pose.linear().matrix();
-    //         Eigen::Matrix4d translation = -cameraPoses[0].pose.translation().matrix();
-    //
-    //         calibrationEigen.block<3, 1>(0, 3) = translation;
-    //
-    //         std::cout << calibrationEigen << "\n-----" << std::endl;
-    //
-    //         auto cameraMatrix = intrinsicMatrixEigen * rotation * calibrationEigen;
-    //      
-    //
-    //         Eigen::Vector4d demEigen(Xz.x, Xz.y, Xz.z, 1.0); //Converting pcl::PointXYZRGB to Eigen
-    //         demEigen[0] = max.x - demEigen[0] * grid_resolution;
-    //         demEigen[1] = max.y - demEigen[1] * grid_resolution; //to world space
-    //         //Eigen::Vector3d cameraEigen(Pc_dem.x, Pc_dem.y, Pc_dem.z);
-    //         //Eigen::Vector3d demToCamera = cameraEigen - demEigen; //Line from DEM surface to camera point
-    //         //demToCamera.normalize();
-    //
-    //         Eigen::Vector4d imagePoint = cameraMatrix * demEigen;
-    //         outputFile << imagePoint << "\n-------" << std::endl;
-    //
-    //         //std::cout << Pc << " || " << max << "\n------------" << std::endl;
-    //         //std::cout << Pc_dem << std::endl;
-    //
-    //         //Plane equation: Ax + By + Cz + D = 0
-    //         /*Eigen::Vector3d principalPoint = cameraPoses[0].pose * Eigen::Vector3d(0, 0, fx); //In map frame; (x, y, z)
-    //         principalPoint.x() = (max.x - principalPoint.x()) / grid_resolution;
-    //         principalPoint.y() = (max.y - principalPoint.y()) / grid_resolution; //DEM frame
-    //         Eigen::Vector3d imgPlaneNormal = cameraPoses[0].pose * Eigen::Vector3d(0, 0, 1); //In map frame; (A, B, C)
-    //         imgPlaneNormal.x() = (max.x - imgPlaneNormal.x()) / grid_resolution;
-    //         imgPlaneNormal.y() = (max.y - imgPlaneNormal.y()) / grid_resolution; //DEM frame
-    //         double D = -imgPlaneNormal.dot(principalPoint);
-    //
-    //         double t = (principalPoint - demEigen).dot(imgPlaneNormal) / demToCamera.dot(imgPlaneNormal);
-    //         Eigen::Vector3d intersectionPoint = demEigen + t * demToCamera; //In DEM frame
-    //
-    //         std::cout << principalPoint << "\n----------" << std::endl;
-    //       
-    //         //DEM -> map -> camera -> image
-    //         Eigen::Vector3d intersectionTransformed = intersectionPoint;
-    //         intersectionTransformed.x() = max.x - intersectionTransformed.x() * grid_resolution;
-    //         intersectionTransformed.y() = max.y - intersectionTransformed.y() * grid_resolution; //DEM -> map 
-    //         intersectionTransformed = cameraPoses[0].pose.inverse() * intersectionPoint; //map -> camera
-    //        
-    //         //cout << intersectionTransformed.x() << " " << intersectionTransformed.y() << " " << intersectionTransformed.z() << endl;*/
-    //     }
-    // }
-    //
-    // outputFile.close();
+
 
     return 0;
 }
