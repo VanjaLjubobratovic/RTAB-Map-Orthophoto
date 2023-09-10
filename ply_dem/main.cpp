@@ -117,7 +117,7 @@ void filtrationViz(pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered, pcl::PointCl
 }
 
 template <typename T>
-void nearestNeighborInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius) {
+void nearestNeighborInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int threads = 1) {
     cv::Mat interpolated = dem.clone();
 
     for(int i = 0; i < dem.rows; i++) {
@@ -144,12 +144,13 @@ void nearestNeighborInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::
     dem = interpolated;
 }
 
-void knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int nNeighbors, float p) {
-    cv::Mat interpolated = dem.clone();
+//----------------------------------------------------------------------------------
 
-    for(int i = 0; i < dem.rows; i++) {
-        for(int j = 0; j < dem.cols; j++) {
-            if(std::isnan(dem.at<float>(i, j))){
+void knnInterpolationThread(const cv::Mat& input, cv::Mat& output, const cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int nNeighbors, float p, int startRow, int endRow) {
+
+    for(int i = startRow; i < endRow; i++) {
+        for(int j = 0; j < input.cols; j++) {
+            if(isNaN(input.at<cv::Vec3f>(i, j))){
                 std::vector<float> queryData = {(float) i, (float) j};
                 std::vector<float> dists;
                 std::vector<int> indices;
@@ -169,7 +170,7 @@ void knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTre
                     int n_i = dataPoints.at<cv::Point2f>(indices[k]).x;
                     int n_j = dataPoints.at<cv::Point2f>(indices[k]).y;
 
-                    cv::Vec3f u_i = dem.at<cv::Vec3f>(n_i, n_j);
+                    cv::Vec3f u_i = input.at<cv::Vec3f>(n_i, n_j);
                     float wi = 1.0 / pow(dists[k], p);
                     numerator += wi * u_i;
                     denominator += cv::Vec3f::all(wi);
@@ -178,13 +179,36 @@ void knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTre
                 cv::Vec3f result;
                 cv::divide(numerator, denominator, result);
 
-                interpolated.at<cv::Vec3f>(i, j) = result;
+                output.at<cv::Vec3f>(i, j) = result;
             }
         }
     }
 
+    std::cout << "Thread with START " << startRow << " and END " << endRow << " finished!" << std::endl;
+}
+
+void knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int nNeighbors, float p, int numThreads = 1) {
+    std::cout << "Starting KNN threads" << std::endl;
+    cv::Mat interpolated = dem.clone();
+    
+    std::vector<std::thread> threads;
+    int rowsPerThread = dem.rows / numThreads;
+
+    for(int threadId = 0; threadId < numThreads; threadId++) {
+        int startRow = threadId * rowsPerThread;
+        int endRow = (threadId == numThreads - 1) ? dem.rows : (startRow + rowsPerThread);
+
+        threads.emplace_back(knnInterpolationThread, std::ref(interpolated), std::ref(interpolated),
+                            std::ref(dataPoints), std::ref(kdTree), searchRadius, nNeighbors, p, startRow, endRow);
+    }
+
+    for(auto& thread : threads) {
+        thread.join();
+    }
+
     dem = interpolated;
 }
+//----------------------------------------------------------------------------------
 
 std::vector<CameraPose> readPoses(const std::string& path) {
     std::vector<CameraPose> cameraPoses;
@@ -218,24 +242,6 @@ std::vector<CameraPose> readPoses(const std::string& path) {
 
     file.close();
     return cameraPoses;
-}
-
-cv::Mat warpImage(const cv::Mat& image, const CameraPose& cameraPose, const cv::Mat& dem) {
-    //---INVERSE CAMERA TRANSFORM---
-    cv::Mat warpedImage;
-    cv::Mat transformMatrix(3, 3, CV_64F);
-
-    auto eigenMat = cameraPose.pose.matrix();
-
-    for(int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            transformMatrix.at<float>(i, j) = eigenMat(i, j);
-        }
-    }
-
-    cv::warpPerspective(image, warpedImage, transformMatrix, image.size(), cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar());
-
-    return warpedImage;
 }
 
 std::vector<cv::Mat> readImages(const std::string& path, std::vector<CameraPose>& poses) {
@@ -361,25 +367,15 @@ cv::Mat gaussSmooth(cv::Mat* raster, int kernelSize, float sigma) {
 //----------------------------------------------------------------------------------
 
 int main(int, char**){
-    //std::string plyPath = "/home/vanja/Desktop/cloudExportTest/cloud9.ply";
-    std::string plyPath = "/home/vanja/Desktop/CLOUD/livingroom5/cloud.ply";
+    std::string plyPath = "/home/vanja/Desktop/CLOUD/livingroom4/cloud.ply";
     std::string posesPath = "/home/vanja/Desktop/cloudExportTest/poses.txt";
     std::string imagesPath = "/home/vanja/Desktop/cloudExportTest/rgb/";
-    //std::string plyPath = "/home/vanja/Desktop/CLOUD/rgbd-scenes-v2/pc/09.ply";
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     if(pcl::io::loadPLYFile<pcl::PointXYZRGB>(plyPath, *cloud) == -1) {
         cerr << "ERROR: Unable to load PLY file." << endl;
         return -1;
     }
-
-    //This is cs correction for rgbd-scenes-v2 dataset
-    /*for (int i = 0; i < cloud->size(); i++) {
-        //Swapping y and z axis and changing z axis direction
-        float tmp = cloud->points[i].y;
-        cloud->points[i].y = cloud->points[i].z;
-        cloud->points[i].z = -tmp;
-    }*/
 
     //Approximately correcting the tilt in dataset
     float angle_rad = 25.0f * M_PI / 180.0;
@@ -444,8 +440,8 @@ int main(int, char**){
     auto mosaicKdTree = buildKDTree(mosaicDataPoints);
 
     std::cout << "Interpolating" << std::endl;
-    nearestNeighborInterpolation<cv::Vec3f>(mosaicNN, mosaicDataPoints, mosaicKdTree, 10);
-    knnInterpolation(mosaicKNN, mosaicDataPoints, mosaicKdTree, 10, 5, 4.0);
+    //nearestNeighborInterpolation<cv::Vec3f>(mosaicNN, mosaicDataPoints, mosaicKdTree, 10);
+    knnInterpolation(mosaicKNN, mosaicDataPoints, mosaicKdTree, 10, 20, 2.0, 8);
 
     cv::normalize(mosaic, mosaic, 0, 255, cv::NORM_MINMAX, CV_8U);
     cv::normalize(mosaicNN, mosaicNN, 0, 255, cv::NORM_MINMAX, CV_8U);
