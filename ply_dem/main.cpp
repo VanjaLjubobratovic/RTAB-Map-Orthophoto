@@ -292,12 +292,22 @@ cv::Mat generateColorizedDem(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, doubl
 //--------------------------------------------------
 struct Voxel {
     int datapoints = 0;
-
+    int height = 0; 
     cv::Vec3f pointBGR{cv::Vec3f::all(std::numeric_limits<float>::quiet_NaN())};
 
-    void addPoint(pcl::PointXYZRGB* point) {
+    void addPoint(pcl::PointXYZRGB* point, int heightIndex) {
+        if(height > heightIndex) {
+            return;
+        } else if (height < heightIndex) {
+            datapoints = 1;
+            height = heightIndex;
+            pointBGR = cv::Vec3f(point->b, point->g, point->r);
+            return;
+        }
+
         if(!datapoints) {
             pointBGR = cv::Vec3f(point->b, point->g, point->r);
+            height = heightIndex;
         } else {
             pointBGR *= datapoints;
             pointBGR += cv::Vec3f(point->b, point->g, point->r);
@@ -327,24 +337,22 @@ cv::Mat voxelizeCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, double grid_
     int ySize = ceil((max.y - min.y) / grid_resolution);
     int zSize = ceil((max.z - min.z) / grid_resolution);
 
-    std::cout << cv::Vec3f(xSize, ySize, zSize) << std::endl;
+    //Generating a raster which acts as a top layer of a voxelized space
+    std::vector<std::vector<Voxel>> voxelized(ySize, std::vector<Voxel>(xSize));
 
-    Tensor tensor(ySize, std::vector<std::vector<Voxel>>(xSize, std::vector<Voxel>(zSize)));
-
-    for(auto point : cloud->points) {
+    for(auto point : cloud -> points) {
         int x = ((max.x - point.x) / grid_resolution);
         int y = ((max.y - point.y) / grid_resolution);
-        int z = ((max.z - point.z) / grid_resolution);
+        int z = ((point.z - min.z) / grid_resolution); //Bottom of the volume cube has height of 0 for simplicity
 
-        tensor[y][x][z].addPoint(&point);
+        voxelized[y][x].addPoint(&point, z);
     }
 
+    //Generating colorized raster
     cv::Mat raster(ySize, xSize, CV_32FC3, cv::Scalar::all(std::numeric_limits<float>::quiet_NaN()));
-
     for(int i = 0; i < ySize; i++) {
         for(int j = 0; j < xSize; j++) {
-            auto projection = findTop(tensor[i][j]).pointBGR;
-            raster.at<cv::Vec3f>(i, j) = projection;
+            raster.at<cv::Vec3f>(i, j) = voxelized[i][j].pointBGR;
         }
     }
 
@@ -354,7 +362,7 @@ cv::Mat voxelizeCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, double grid_
 
 int main(int, char**){
     //std::string plyPath = "/home/vanja/Desktop/cloudExportTest/cloud9.ply";
-    std::string plyPath = "/home/vanja/Desktop/CLOUD/livingroom5/cloud.ply";
+    std::string plyPath = "/home/vanja/Desktop/CLOUD/livingroom4/cloud.ply";
     std::string posesPath = "/home/vanja/Desktop/cloudExportTest/poses.txt";
     std::string imagesPath = "/home/vanja/Desktop/cloudExportTest/rgb/";
     //std::string plyPath = "/home/vanja/Desktop/CLOUD/rgbd-scenes-v2/pc/09.ply";
@@ -419,21 +427,23 @@ int main(int, char**){
     cv::flann::Index kdTree = buildKDTree(dataPoints); //kd-tree build
     //nearestNeighbourInterpolation<float>(heightmap, dataPoints, kdTree, 10); // interpolation
     //knnInterpolation(heightmap, dataPoints, kdTree, 10, 5, 4.0);
-    cout << "Done interpolating" << endl;
     cv::normalize(heightmap, heightmap, 0, 255, cv::NORM_MINMAX, CV_8U);
     cv::imwrite("../outputDem.jpg", heightmap);
     cout << "DEM saved to file!" << endl;
 
 
     //---GENERATING MOSAIC METHOD 1---
+    std::cout << "Generating mosaic" << std::endl;
     //auto mosaic = generateColorizedDem(cloud_filtered, 0.005);
     auto mosaic = voxelizeCloud(cloud_filtered, grid_resolution);
     auto mosaicNN = mosaic.clone();
     auto mosaicKNN = mosaic.clone();
 
+    std::cout << "Generating k-d trees" << std::endl;
     auto mosaicDataPoints = extractDataPoints<cv::Vec3f>(mosaic);
     auto mosaicKdTree = buildKDTree(mosaicDataPoints);
 
+    std::cout << "Interpolating" << std::endl;
     nearestNeighborInterpolation<cv::Vec3f>(mosaicNN, mosaicDataPoints, mosaicKdTree, 10);
     knnInterpolation(mosaicKNN, mosaicDataPoints, mosaicKdTree, 10, 5, 4.0);
 
@@ -443,18 +453,15 @@ int main(int, char**){
     cv::imwrite("../colorizedDem.jpg", mosaic);
     cv::imwrite("../colorizedDemNN.jpg", mosaicNN);
     cv::imwrite("../colorizedDemKNN.jpg", mosaicKNN);
+    std::cout << "Images saved!" << std::endl;
 
     //filtrationViz(cloud_filtered, cloud);
 
-    
-
     //---LOADING CAMERA POSES---
-    std::vector<CameraPose> cameraPoses = readPoses(posesPath);
+    //std::vector<CameraPose> cameraPoses = readPoses(posesPath);
 
     //---LOADING IMAGES---
-    std::vector<cv::Mat> rgbImages = readImages(imagesPath, cameraPoses);
-
-
+    //std::vector<cv::Mat> rgbImages = readImages(imagesPath, cameraPoses);
 
     return 0;
 }
