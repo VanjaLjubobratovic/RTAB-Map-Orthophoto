@@ -289,7 +289,7 @@ cv::Mat generateColorizedDem(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, doubl
     return heightmap;
 }
 
-//--------------------------------------------------
+//----------------------------------------------------------------------------------
 struct Voxel {
     int datapoints = 0;
     int height = 0; 
@@ -347,11 +347,22 @@ cv::Mat voxelizeCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, double grid_
 
     return raster;
 }
-//--------------------------------------------------
+//----------------------------------------------------------------------------------
+
+
+//----------------------------------------------------------------------------------
+cv::Mat gaussSmooth(cv::Mat* raster, int kernelSize, float sigma) {
+    auto result = raster->clone();
+    cv::Mat kernel = cv::getGaussianKernel(kernelSize, sigma, CV_32F);
+    cv::filter2D(result, result, -1, kernel); //-1 -> output is the same data type as input
+
+    return result;
+}
+//----------------------------------------------------------------------------------
 
 int main(int, char**){
     //std::string plyPath = "/home/vanja/Desktop/cloudExportTest/cloud9.ply";
-    std::string plyPath = "/home/vanja/Desktop/CLOUD/livingroom4/cloud.ply";
+    std::string plyPath = "/home/vanja/Desktop/CLOUD/livingroom5/cloud.ply";
     std::string posesPath = "/home/vanja/Desktop/cloudExportTest/poses.txt";
     std::string imagesPath = "/home/vanja/Desktop/cloudExportTest/rgb/";
     //std::string plyPath = "/home/vanja/Desktop/CLOUD/rgbd-scenes-v2/pc/09.ply";
@@ -439,6 +450,11 @@ int main(int, char**){
     cv::normalize(mosaic, mosaic, 0, 255, cv::NORM_MINMAX, CV_8U);
     cv::normalize(mosaicNN, mosaicNN, 0, 255, cv::NORM_MINMAX, CV_8U);
     cv::normalize(mosaicKNN, mosaicKNN, 0, 255, cv::NORM_MINMAX, CV_8U);
+
+    /*std::cout << "Smoothing" << std::endl;
+    mosaicNN = gaussSmooth(&mosaicNN, 5, 0.5);
+    mosaicKNN = gaussSmooth(&mosaicKNN, 5, 0.5);*/
+
     cv::imwrite("../colorizedDem.jpg", mosaic);
     cv::imwrite("../colorizedDemNN.jpg", mosaicNN);
     cv::imwrite("../colorizedDemKNN.jpg", mosaicKNN);
