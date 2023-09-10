@@ -116,13 +116,12 @@ void filtrationViz(pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered, pcl::PointCl
     }
 }
 
+//----------------------------------------------------------------------------------
 template <typename T>
-void nearestNeighborInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int threads = 1) {
-    cv::Mat interpolated = dem.clone();
-
-    for(int i = 0; i < dem.rows; i++) {
-        for(int j = 0; j < dem.cols; j++) {
-            if(isNaN(dem.at<T>(i, j))) {
+void nnInterpolationThread(cv::Mat& input, cv::Mat& output, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int startRow, int endRow) {
+    for(int i = startRow; i < endRow; i++) {
+        for(int j = 0; j < input.cols; j++) {
+            if(isNaN(input.at<T>(i, j))) {
                 std::vector<float> queryData = {(float) i, (float) j};
                 std::vector<int> indices;
                 std::vector<float> dists;
@@ -132,20 +131,42 @@ void nearestNeighborInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::
                 if(indices[0] == 0 && dists[0] == 0.0)
                     continue; //No neighbour found
 
-                //I know that I is supposed to represent y axis, leave me alone
                 int nearest_i = dataPoints.at<cv::Point2f>(indices[0]).x;
                 int nearest_j = dataPoints.at<cv::Point2f>(indices[0]).y;
 
-                interpolated.at<T>(i, j) = dem.at<T>(nearest_i, nearest_j);
+                output.at<T>(i, j) = input.at<T>(nearest_i, nearest_j);
             }
         }
     }
 
-    dem = interpolated;
+    std::cout << "NN thread with START " << startRow << " and END " << endRow << " finished!" << std::endl;
 }
 
+template <typename T>
+void nnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int numThreads = 1) {
+    std::cout << "Starting NN threads" << std::endl;
+    cv::Mat interpolated = dem.clone();
+    
+    std::vector<std::thread> threads;
+    int rowsPerThread = dem.rows / numThreads;
+
+    for(int threadId = 0; threadId < numThreads; threadId++) {
+        int startRow = threadId * rowsPerThread;
+        int endRow = (threadId == numThreads - 1) ? dem.rows : (startRow + rowsPerThread);
+
+        threads.emplace_back(nnInterpolationThread<cv::Vec3f>, std::ref(interpolated), std::ref(interpolated),
+                            std::ref(dataPoints), std::ref(kdTree), searchRadius, startRow, endRow);
+    }
+
+    for(auto& thread : threads) {
+        thread.join();
+    }
+
+    dem = interpolated;
+}
 //----------------------------------------------------------------------------------
 
+//----------------------------------------------------------------------------------
 void knnInterpolationThread(const cv::Mat& input, cv::Mat& output, const cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int nNeighbors, float p, int startRow, int endRow) {
 
     for(int i = startRow; i < endRow; i++) {
@@ -184,7 +205,7 @@ void knnInterpolationThread(const cv::Mat& input, cv::Mat& output, const cv::Mat
         }
     }
 
-    std::cout << "Thread with START " << startRow << " and END " << endRow << " finished!" << std::endl;
+    std::cout << "KNN thread with START " << startRow << " and END " << endRow << " finished!" << std::endl;
 }
 
 void knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int nNeighbors, float p, int numThreads = 1) {
@@ -440,7 +461,7 @@ int main(int, char**){
     auto mosaicKdTree = buildKDTree(mosaicDataPoints);
 
     std::cout << "Interpolating" << std::endl;
-    //nearestNeighborInterpolation<cv::Vec3f>(mosaicNN, mosaicDataPoints, mosaicKdTree, 10);
+    nnInterpolation<cv::Vec3f>(mosaicNN, mosaicDataPoints, mosaicKdTree, 10, 8);
     knnInterpolation(mosaicKNN, mosaicDataPoints, mosaicKdTree, 10, 20, 2.0, 8);
 
     cv::normalize(mosaic, mosaic, 0, 255, cv::NORM_MINMAX, CV_8U);
