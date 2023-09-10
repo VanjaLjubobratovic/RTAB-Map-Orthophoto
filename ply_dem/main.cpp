@@ -318,17 +318,6 @@ struct Voxel {
     }
 };
 
-typedef std::vector<std::vector<std::vector<Voxel>>> Tensor;
-
-Voxel findTop(std::vector<Voxel> voxelStack) {
-    for(auto voxel : voxelStack) {
-        if(voxel.datapoints != 0)
-            return voxel;
-    }
-
-    return voxelStack[0];
-}
-
 cv::Mat voxelizeCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, double grid_resolution) {
     pcl::PointXYZRGB min, max;
     pcl::getMinMax3D(*cloud, min, max);
