@@ -1,7 +1,7 @@
 #!/bin/bash
 source /opt/ros/humble/setup.bash
 
-ros2 launch rtabmap_launch rtabmap.launch.py \
+LC_NUMERIC="en_US.UTF-8"; ros2 launch rtabmap_launch rtabmap.launch.py \
 rtabmap_args:="--delete_db_on_start" \
 rviz:=false \
 rtabmapviz:=true \
