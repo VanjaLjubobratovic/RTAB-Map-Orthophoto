@@ -7,8 +7,8 @@ source /opt/ros/humble/setup.bash
 #. install/local_setup.bash
 
 ros2 launch realsense2_camera rs_launch.py \
-rgb_camera.profile:=848x480x15 \
-depth_module.profile:=848x480x15 \
+rgb_camera.profile:=848x480x30 \
+depth_module.profile:=848x480x30 \
 enable_gyro:=true \
 enable_accel:=true \
 unite_imu_method:=1 \
@@ -20,4 +20,7 @@ enable_sync:=false \
 align_depth.enable:=true \
 pointcloud.enable:=false \
 initial_reset:=true \
-json_file_path:=/home/vanja/RTAB-Map-Orthophoto/configs/camera_config_autoexp.json
+depth_module.enable_auto_exposure:=true \
+decimation_filter.enable:=true \
+temporal_filter.enable:=true
+##json_file_path:=/home/vanja/RTAB-Map-Orthophoto/configs/camera_config_autoexp.json

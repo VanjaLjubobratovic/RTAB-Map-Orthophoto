@@ -388,7 +388,8 @@ cv::Mat gaussSmooth(cv::Mat* raster, int kernelSize, float sigma) {
 //----------------------------------------------------------------------------------
 
 int main(int, char**){
-    std::string plyPath = "/home/vanja/Desktop/CLOUD/livingroom4/cloud.ply";
+    //std::string plyPath = "/home/vanja/Desktop/CLOUD/livingroom4/cloud.ply";
+    std::string plyPath = "/home/vanja/Desktop/cloud.ply";
     std::string posesPath = "/home/vanja/Desktop/cloudExportTest/poses.txt";
     std::string imagesPath = "/home/vanja/Desktop/cloudExportTest/rgb/";
 
