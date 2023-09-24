@@ -2,3 +2,8 @@ ply_dem/build
 ply_dem/.vscode
 build
 .vscode
+
+/mosaicing_pkg/build
+/mosaicing_pkg/include
+/mosaicing_pkg/install
+/mosaicing_pkg/log

@@ -388,8 +388,7 @@ cv::Mat gaussSmooth(cv::Mat* raster, int kernelSize, float sigma) {
 //----------------------------------------------------------------------------------
 
 int main(int, char**){
-    //std::string plyPath = "/home/vanja/Desktop/CLOUD/livingroom4/cloud.ply";
-    std::string plyPath = "/home/vanja/Desktop/cloud.ply";
+    std::string plyPath = "/home/vanja/Desktop/CLOUD/tiltedCloud.ply";
     std::string posesPath = "/home/vanja/Desktop/cloudExportTest/poses.txt";
     std::string imagesPath = "/home/vanja/Desktop/cloudExportTest/rgb/";
 
@@ -398,12 +397,6 @@ int main(int, char**){
         cerr << "ERROR: Unable to load PLY file." << endl;
         return -1;
     }
-
-    //Approximately correcting the tilt in dataset
-    float angle_rad = 25.0f * M_PI / 180.0;
-    Eigen::Affine3f rotation_matrix = Eigen::Affine3f::Identity();
-    rotation_matrix.rotate(Eigen::AngleAxisf(angle_rad, Eigen::Vector3f::UnitX()));
-    pcl::transformPointCloud(*cloud, *cloud, rotation_matrix);
 
     //---FILTERING OUTLIERS---
     pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
@@ -473,9 +466,9 @@ int main(int, char**){
     mosaicNN = gaussSmooth(&mosaicNN, 5, 0.5);
     mosaicKNN = gaussSmooth(&mosaicKNN, 5, 0.5);*/
 
-    cv::imwrite("../colorizedDem.jpg", mosaic);
-    cv::imwrite("../colorizedDemNN.jpg", mosaicNN);
-    cv::imwrite("../colorizedDemKNN.jpg", mosaicKNN);
+    cv::imwrite("../ply_dem/colorizedDem.jpg", mosaic);
+    cv::imwrite("../ply_dem/colorizedDemNN.jpg", mosaicNN);
+    cv::imwrite("../ply_dem/colorizedDemKNN.jpg", mosaicKNN);
     std::cout << "Images saved!" << std::endl;
 
     //filtrationViz(cloud_filtered, cloud);
