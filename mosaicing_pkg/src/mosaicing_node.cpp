@@ -36,10 +36,10 @@ private:
             auto mosaicNN = mosaic.clone();
             auto mosaicKNN = mosaic.clone();
 
-            auto dataPoints = MosaicingTools::extractDataPoints<cv::Vec3f>(mosaic);
+            auto dataPoints = MosaicingTools::extractDataPoints(mosaic);
             auto mosaicKdTree = MosaicingTools::buildKDTree(dataPoints);
             
-            MosaicingTools::nnInterpolation<cv::Vec3f>(mosaicNN, dataPoints, mosaicKdTree, 10, 8);
+            MosaicingTools::nnInterpolation(mosaicNN, dataPoints, mosaicKdTree, 10, 8);
             MosaicingTools::knnInterpolation(mosaicKNN, dataPoints, mosaicKdTree, 10, 20, 2.0, 8);
 
             cv::imwrite("colorizedDem.jpg", mosaic);

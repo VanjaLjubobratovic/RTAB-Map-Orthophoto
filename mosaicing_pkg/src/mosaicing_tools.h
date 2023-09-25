@@ -1,3 +1,5 @@
+#pragma once
+
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -27,7 +29,6 @@ public:
     template <typename T>
     static bool isNaN(const T& value);
 
-    template <typename T>
     static cv::Mat extractDataPoints(const cv::Mat& raster);
 
     static cv::flann::Index buildKDTree(const cv::Mat& dataPoints);
@@ -37,13 +38,12 @@ public:
     static void filterCloud(
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, 
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr output,
-        int nNeighbors,
-        float stdDevMulThresh);
+        int nNeighbors = 50,
+        float stdDevMulThresh = 0.3);
 
     //TODO: make this a bit more generalized
     static void filtrationViz(pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered, pcl::PointCloud<pcl::PointXYZRGB>::Ptr raw);
 
-    template <typename T>
     static void nnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int numThreads = 1);
     static void knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int nNeighbors, float p, int numThreads = 1);
 
@@ -62,9 +62,8 @@ private:
         void addPoint(pcl::PointXYZRGB* point, int heightIndex);
     };
 
-    template <typename T>
-    void nnInterpolationThread(cv::Mat& input, cv::Mat& output, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int startRow, int endRow);
-    void knnInterpolationThread(const cv::Mat& input, cv::Mat& output, const cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int nNeighbors, float p, int startRow, int endRow);
+    static void nnInterpolationThread(cv::Mat& input, cv::Mat& output, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int startRow, int endRow);
+    static void knnInterpolationThread(const cv::Mat& input, cv::Mat& output, const cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int nNeighbors, float p, int startRow, int endRow);
 };
 
 template <>

@@ -10,13 +10,12 @@ bool MosaicingTools::isNaN<cv::Vec3f>(const cv::Vec3f& value) {
     return std::isnan(value[0]) || std::isnan(value[1]) || std::isnan(value[2]);
 }
 
-template <typename T>
 cv::Mat MosaicingTools::extractDataPoints(const cv::Mat& dem) {
     cv::Mat points;
 
     for (int i = 0; i < dem.rows; i++) {
         for (int j = 0; j < dem.cols; j++) {
-            if(!isNaN(dem.at<T>(i, j))) {
+            if(!isNaN(dem.at<cv::Vec3f>(i, j))) {
                 points.push_back(cv::Point2f(i, j));
             }
         }
@@ -49,7 +48,7 @@ pcl::PointXYZRGB MosaicingTools::calculateCentroid(pcl::PointCloud<pcl::PointXYZ
     return centroid;
 }
 
-void MosaicingTools::filterCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, pcl::PointCloud<pcl::PointXYZRGB>::Ptr output, int nNeighbors = 50, float stdDevMulThresh = 0.3) {
+void MosaicingTools::filterCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, pcl::PointCloud<pcl::PointXYZRGB>::Ptr output, int nNeighbors, float stdDevMulThresh) {
     //---FILTERING OUTLIERS---
     pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
     sor.setInputCloud(input);
@@ -58,11 +57,11 @@ void MosaicingTools::filterCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, p
     sor.filter(*output);
 }
 
-template <typename T>
+
 void MosaicingTools::nnInterpolationThread(cv::Mat& input, cv::Mat& output, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int startRow, int endRow) {
     for(int i = startRow; i < endRow; i++) {
         for(int j = 0; j < input.cols; j++) {
-            if(isNaN(input.at<T>(i, j))) {
+            if(isNaN(input.at<cv::Vec3f>(i, j))) {
                 std::vector<float> queryData = {(float) i, (float) j};
                 std::vector<int> indices;
                 std::vector<float> dists;
@@ -75,7 +74,7 @@ void MosaicingTools::nnInterpolationThread(cv::Mat& input, cv::Mat& output, cv::
                 int nearest_i = dataPoints.at<cv::Point2f>(indices[0]).x;
                 int nearest_j = dataPoints.at<cv::Point2f>(indices[0]).y;
 
-                output.at<T>(i, j) = input.at<T>(nearest_i, nearest_j);
+                output.at<cv::Vec3f>(i, j) = input.at<cv::Vec3f>(nearest_i, nearest_j);
             }
         }
     }
@@ -83,8 +82,7 @@ void MosaicingTools::nnInterpolationThread(cv::Mat& input, cv::Mat& output, cv::
     std::cout << "NN thread with START " << startRow << " and END " << endRow << " finished!" << std::endl;
 }
 
-template <typename T>
-void MosaicingTools::nnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int numThreads = 1) {
+void MosaicingTools::nnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int numThreads) {
     std::cout << "Starting NN threads" << std::endl;
     cv::Mat interpolated = dem.clone();
     
@@ -95,7 +93,7 @@ void MosaicingTools::nnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flan
         int startRow = threadId * rowsPerThread;
         int endRow = (threadId == numThreads - 1) ? dem.rows : (startRow + rowsPerThread);
 
-        threads.emplace_back(nnInterpolationThread<cv::Vec3f>, std::ref(interpolated), std::ref(interpolated),
+        threads.emplace_back(MosaicingTools::nnInterpolationThread, std::ref(interpolated), std::ref(interpolated),
                             std::ref(dataPoints), std::ref(kdTree), searchRadius, startRow, endRow);
     }
 
@@ -125,7 +123,7 @@ void MosaicingTools::knnInterpolationThread(const cv::Mat& input, cv::Mat& outpu
                 cv::Vec3f numerator = cv::Vec3f::all(0.0f);
                 cv::Vec3f denominator = cv::Vec3f::all(0.0f);
 
-                for(int k = 0; k < indices.size(); k++) {
+                for(std::vector<int>::size_type k = 0; k < indices.size(); k++) {
                     if(dists[k] == 0) 
                         continue;
 
@@ -149,7 +147,7 @@ void MosaicingTools::knnInterpolationThread(const cv::Mat& input, cv::Mat& outpu
     std::cout << "KNN thread with START " << startRow << " and END " << endRow << " finished!" << std::endl;
 }
 
-void MosaicingTools::knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int nNeighbors, float p, int numThreads = 1) {
+void MosaicingTools::knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int nNeighbors, float p, int numThreads) {
     std::cout << "Starting KNN threads" << std::endl;
     cv::Mat interpolated = dem.clone();
     
@@ -160,7 +158,7 @@ void MosaicingTools::knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::fla
         int startRow = threadId * rowsPerThread;
         int endRow = (threadId == numThreads - 1) ? dem.rows : (startRow + rowsPerThread);
 
-        threads.emplace_back(knnInterpolationThread, std::ref(interpolated), std::ref(interpolated),
+        threads.emplace_back(MosaicingTools::knnInterpolationThread, std::ref(interpolated), std::ref(interpolated),
                             std::ref(dataPoints), std::ref(kdTree), searchRadius, nNeighbors, p, startRow, endRow);
     }
 
@@ -201,7 +199,7 @@ cv::Mat MosaicingTools::generateMosaic(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cl
 
     int xSize = ceil((max.x - min.x) / grid_resolution);
     int ySize = ceil((max.y - min.y) / grid_resolution);
-    int zSize = ceil((max.z - min.z) / grid_resolution);
+    //int zSize = ceil((max.z - min.z) / grid_resolution);
 
     //Generating a raster which acts as a top layer of a voxelized space
     std::vector<std::vector<Voxel>> voxelized(ySize, std::vector<Voxel>(xSize));
