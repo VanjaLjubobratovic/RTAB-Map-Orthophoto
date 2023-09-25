@@ -4,6 +4,9 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <thread>
+#include <mutex>
+
+std::mutex callbackLock;
 
 class RTABMapPointCloudSubscriber : public rclcpp::Node {
 public:
@@ -16,6 +19,9 @@ public:
 
 private:
     void pointCloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
+        if(!callbackLock.try_lock())
+            return;
+
         std::cout << "Callback number: " << callbacks << std::endl;
         // Convert the ROS point cloud message to a PCL point cloud
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -32,7 +38,7 @@ private:
             //---FILTERING OUTLIERS---
             MosaicingTools::filterCloud(cloud, cloud, 50, 0.3);
 
-            auto mosaic = MosaicingTools::generateMosaic(cloud);
+            auto mosaic = MosaicingTools::generateMosaic(cloud, 0.005);
             auto mosaicNN = mosaic.clone();
             auto mosaicKNN = mosaic.clone();
 
@@ -42,14 +48,17 @@ private:
             MosaicingTools::nnInterpolation(mosaicNN, dataPoints, mosaicKdTree, 10, 8);
             MosaicingTools::knnInterpolation(mosaicKNN, dataPoints, mosaicKdTree, 10, 20, 2.0, 8);
 
-            cv::imwrite("colorizedDem.jpg", mosaic);
-            cv::imwrite("colorizedDemNN.jpg", mosaicNN);
-            cv::imwrite("colorizedDemKNN.jpg", mosaicKNN);
+            cv::imwrite("../colorizedDem.jpg", mosaic);
+            cv::imwrite("../colorizedDemNN.jpg", mosaicNN);
+            cv::imwrite("../colorizedDemKNN.jpg", mosaicKNN);
 
             std::cout << "Done generating!" << std::endl;
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+        std::cout << "Thread sleeping for 10s..." << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+        std::cout << "Thread awake, unlocking..." << std::endl;
+        callbackLock.unlock();
     }
 
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr point_cloud_subscription_;
