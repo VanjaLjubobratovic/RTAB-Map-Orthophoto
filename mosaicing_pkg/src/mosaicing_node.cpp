@@ -1,8 +1,9 @@
+#include "mosaicing_tools.h"
+
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
-#include "mosaicing_tools.h"
-
+#include <thread>
 
 class RTABMapPointCloudSubscriber : public rclcpp::Node {
 public:
@@ -17,18 +18,38 @@ private:
     void pointCloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
         std::cout << "Callback number: " << callbacks << std::endl;
         // Convert the ROS point cloud message to a PCL point cloud
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr tmp(new pcl::PointCloud<pcl::PointXYZRGB>);
-        pcl::fromROSMsg(*msg, *tmp);
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+        pcl::fromROSMsg(*msg, *cloud);
 
         // Process the point cloud data here
         // You can perform various PCL operations on pcl_cloud
         callbacks++;
 
-        if(callbacks == 20) {
-            auto visualizer(new pcl::visualization::PCLVisualizer("Point cloud filter vs raw"));
-            visualizer->addPointCloud<pcl::PointXYZRGB>(tmp, "cloud");
-            visualizer->spin();
+        if(callbacks == 1) {
+            callbacks = 0;
+            std::cout << "Generating mosaic..." << std::endl;
+
+            //---FILTERING OUTLIERS---
+            MosaicingTools::filterCloud(cloud, cloud, 50, 0.3);
+
+            auto mosaic = MosaicingTools::generateMosaic(cloud);
+            auto mosaicNN = mosaic.clone();
+            auto mosaicKNN = mosaic.clone();
+
+            auto dataPoints = MosaicingTools::extractDataPoints<cv::Vec3f>(mosaic);
+            auto mosaicKdTree = MosaicingTools::buildKDTree(dataPoints);
+            
+            MosaicingTools::nnInterpolation<cv::Vec3f>(mosaicNN, dataPoints, mosaicKdTree, 10, 8);
+            MosaicingTools::knnInterpolation(mosaicKNN, dataPoints, mosaicKdTree, 10, 20, 2.0, 8);
+
+            cv::imwrite("colorizedDem.jpg", mosaic);
+            cv::imwrite("colorizedDemNN.jpg", mosaicNN);
+            cv::imwrite("colorizedDemKNN.jpg", mosaicKNN);
+
+            std::cout << "Done generating!" << std::endl;
         }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(5000));
     }
 
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr point_cloud_subscription_;

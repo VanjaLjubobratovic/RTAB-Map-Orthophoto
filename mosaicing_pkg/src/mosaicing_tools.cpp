@@ -49,6 +49,14 @@ pcl::PointXYZRGB MosaicingTools::calculateCentroid(pcl::PointCloud<pcl::PointXYZ
     return centroid;
 }
 
+void MosaicingTools::filterCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, pcl::PointCloud<pcl::PointXYZRGB>::Ptr output, int nNeighbors = 50, float stdDevMulThresh = 0.3) {
+    //---FILTERING OUTLIERS---
+    pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
+    sor.setInputCloud(input);
+    sor.setMeanK(nNeighbors); // Number of neighbors to use for mean distance estimation
+    sor.setStddevMulThresh(stdDevMulThresh); // Standard deviation multiplier for distance thresholding
+    sor.filter(*output);
+}
 
 template <typename T>
 void MosaicingTools::nnInterpolationThread(cv::Mat& input, cv::Mat& output, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int startRow, int endRow) {

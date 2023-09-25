@@ -34,6 +34,12 @@ public:
 
     static pcl::PointXYZRGB calculateCentroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud);
 
+    static void filterCloud(
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, 
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr output,
+        int nNeighbors,
+        float stdDevMulThresh);
+
     //TODO: make this a bit more generalized
     static void filtrationViz(pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered, pcl::PointCloud<pcl::PointXYZRGB>::Ptr raw);
 
