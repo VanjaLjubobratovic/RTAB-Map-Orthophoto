@@ -35,9 +35,6 @@ private:
             auto visualizer(new pcl::visualization::PCLVisualizer("Point cloud filter vs raw"));
             visualizer->addPointCloud<pcl::PointXYZRGB>(tmp, "cloud");
             visualizer->spin();
-            /*while(!visualizer->wasStopped()) {
-                visualizer->spin();
-            }*/
         }
     }
 
