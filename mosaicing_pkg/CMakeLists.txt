@@ -15,7 +15,11 @@ find_package(pcl_conversions REQUIRED)
 
 
 
-add_executable(mosaicing_node src/mosaicing_node.cpp)
+add_executable(mosaicing_node 
+    src/mosaicing_node.cpp 
+    src/mosaicing_tools.cpp
+    src/mosaicing_tools.h
+)
 
 
 target_include_directories(mosaicing_node PRIVATE

@@ -293,6 +293,8 @@ cv::Mat generateColorizedDem(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, doubl
         information vertically to a ground plane
     */
 
+   //OBSOLETE
+
     pcl::PointXYZRGB min, max;
     pcl::getMinMax3D(*cloud, min, max);
 
