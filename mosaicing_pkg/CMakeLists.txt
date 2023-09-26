@@ -12,6 +12,9 @@ find_package(sensor_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(PCL 1.3 REQUIRED)
 find_package(pcl_conversions REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(rtabmap_conversions REQUIRED)
+find_package(rtabmap_msgs REQUIRED)
 
 
 
@@ -27,6 +30,8 @@ target_include_directories(mosaicing_node PRIVATE
     ${PCL_INCLUDE_DIRS}
     ${pcl_conversions_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
+    ${rtabmap_conversions_INCLUDE_DIRS}
+    ${rtabmap_msgs_INCLUDE_DIRS}
 )
 
 # Link your executable with the necessary libraries
@@ -35,6 +40,8 @@ ament_target_dependencies(mosaicing_node
     sensor_msgs
     PCL
     OpenCV
+    rtabmap_conversions
+    rtabmap_msgs
 )
 
 target_link_libraries(mosaicing_node
