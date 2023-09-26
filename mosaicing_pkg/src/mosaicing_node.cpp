@@ -15,7 +15,7 @@
 #include <rtabmap_conversions/MsgConversion.h>
 #include <rtabmap_msgs/srv/get_map.hpp>
 
-#define CLOUD_DECIMATION 4
+#define CLOUD_DECIMATION 2
 #define CLOUD_MAX_DEPTH 0.0
 #define CLOUD_MIN_DEPTH 0.0
 #define CLOUD_VOXEL_SIZE 0.01
@@ -81,25 +81,28 @@ private:
         callbackLock.unlock();
     }
 
-    void processMapData(const rtabmap_msgs::msg::MapData::SharedPtr map) {
+    void processMapData(const rtabmap_msgs::msg::MapData map) {
+        std::cout << "Caught message, processing..." << std::endl;
         std::map<int, rtabmap::Transform> poses;
-        for(unsigned int i = 0; i < map->graph.poses_id.size() && i < map->graph.poses.size(); ++i) {
-            poses.insert(std::make_pair(map->graph.poses_id[i], rtabmap_conversions::transformFromPoseMsg(map->graph.poses[i])));
+        for(unsigned int i = 0; i < map.graph.poses_id.size() && i < map.graph.poses.size(); ++i) {
+            poses.insert(std::make_pair(map.graph.poses_id[i], rtabmap_conversions::transformFromPoseMsg(map.graph.poses[i])));
         }
 
         //Add new clouds...
         bool fromDepth = true;
         std::set<int> nodeDataReceived;
-        for(unsigned int i = 0; i < map->nodes.size() && i < map->nodes.size(); ++i) {
-            int id = map->nodes[i].id;
+        for(unsigned int i = 0; i < map.nodes.size() && i < map.nodes.size(); ++i) {
+            //int id = map->nodes[i].id;
 
             //Always refresh cloud if there is data
-            rtabmap::Signature s = rtabmap_conversions::nodeDataFromROS(map->nodes[i]);
-
+            rtabmap::Signature s = rtabmap_conversions::nodeDataFromROS(map.nodes[i]);
+            
+            std::cout << "Checking massive IF #" << i << "..." << std::endl;
             if((fromDepth && !s.sensorData().imageCompressed().empty() && !s.sensorData().depthOrRightCompressed().empty() &&
-                (!s.sensorData().cameraModels().size() || s.sensorData().stereoCameraModels().size())) || 
+                (s.sensorData().cameraModels().size() || s.sensorData().stereoCameraModels().size())) || 
                 (!fromDepth && !s.sensorData().laserScanCompressed().isEmpty())) {
                 
+                std::cout << "Passed IF..." << std::endl;
                 cv::Mat image, depth;
                 rtabmap::LaserScan scan;
 
@@ -108,6 +111,7 @@ private:
                 sensor_msgs::msg::PointCloud2::SharedPtr cloudMsg(new sensor_msgs::msg::PointCloud2);
 
                 if(fromDepth && !s.sensorData().imageRaw().empty() && !s.sensorData().depthOrRightRaw().empty()) {
+                    std::cout << "Passed IF for unpacking data..." << std::endl;
                     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud;
                     pcl::IndicesPtr validIndices(new std::vector<int>);
 
@@ -127,6 +131,7 @@ private:
                         /*
                             IMPLEMENTATION HERE IF NECESSARY
                         */
+                       mosaicer(cloud);
                     }
                 }                
             }
