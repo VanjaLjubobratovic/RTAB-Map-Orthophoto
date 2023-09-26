@@ -39,8 +39,8 @@ public:
 
 private:
     void mosaicer(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud) {
-        if(!callbackLock.try_lock())
-            return;
+        /*if(!callbackLock.try_lock())
+            return;*/
 
         // std::cout << "Callback number: " << callbacks << std::endl;
         // // Convert the ROS point cloud message to a PCL point cloud
@@ -75,10 +75,10 @@ private:
             std::cout << "Done generating!" << std::endl;
         //}
 
-        std::cout << "Thread sleeping for 10s..." << std::endl;
+        /*std::cout << "Thread sleeping for 10s..." << std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(10000));
         std::cout << "Thread awake, unlocking..." << std::endl;
-        callbackLock.unlock();
+        callbackLock.unlock();*/
     }
 
     void processMapData(const rtabmap_msgs::msg::MapData map) {
@@ -87,6 +87,13 @@ private:
         for(unsigned int i = 0; i < map.graph.poses_id.size() && i < map.graph.poses.size(); ++i) {
             poses.insert(std::make_pair(map.graph.poses_id[i], rtabmap_conversions::transformFromPoseMsg(map.graph.poses[i])));
         }
+
+        /*for(auto pose : poses) {
+            std::cout << pose.first << std::endl;
+        }
+
+        std::cout << "#POSES: " << poses.size() << std::endl;
+        std::cout << "LAST POSE: " << poses.end()->second << std::endl;*/
 
         //Add new clouds...
         bool fromDepth = true;
@@ -131,7 +138,18 @@ private:
                         /*
                             IMPLEMENTATION HERE IF NECESSARY
                         */
-                       mosaicer(cloud);
+                       
+                       std::cout << "Before lock..." << std::endl;
+                       std::vector<int> index;
+                       pcl::removeNaNFromPointCloud(*cloud, *cloud, index);
+                       *cloud = *rtabmap::util3d::transformPointCloud(cloud, s.getPose());
+
+                       callbackLock.lock();
+                       *pcl_cloud += *cloud;
+                       //mosaicer(pcl_cloud);
+                       if(poses.size() % 10 == 0)
+                            mosaicer(pcl_cloud);
+                       callbackLock.unlock();
                     }
                 }                
             }
