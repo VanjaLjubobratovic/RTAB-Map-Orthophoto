@@ -19,6 +19,7 @@
 #define CLOUD_MAX_DEPTH 0.0
 #define CLOUD_MIN_DEPTH 0.0
 #define CLOUD_VOXEL_SIZE 0.01
+#define NUM_POSES_TO_MOSAIC 5
 
 
 std::mutex callbackLock;
@@ -26,11 +27,6 @@ std::mutex callbackLock;
 class RTABMapPointCloudSubscriber : public rclcpp::Node {
 public:
     RTABMapPointCloudSubscriber() : Node("rtabmap_pointcloud_subscriber") {
-        /*point_cloud_subscription_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-            "/rtabmap/cloud_map", 10,
-            std::bind(&RTABMapPointCloudSubscriber::pointCloudCallback, this, std::placeholders::_1)
-        );*/
-
         point_cloud_subscription_ = this->create_subscription<rtabmap_msgs::msg::MapData>(
             "/rtabmap/mapData", 10,
             std::bind(&RTABMapPointCloudSubscriber::processMapData, this, std::placeholders::_1)
@@ -39,46 +35,30 @@ public:
 
 private:
     void mosaicer(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud) {
-        /*if(!callbackLock.try_lock())
-            return;*/
+        std::cout << "Generating mosaic..." << std::endl;
 
-        // std::cout << "Callback number: " << callbacks << std::endl;
-        // // Convert the ROS point cloud message to a PCL point cloud
-        // pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-        // pcl::fromROSMsg(*msg, *cloud);
+        //---FILTERING OUTLIERS---
+        MosaicingTools::filterCloud(cloud, cloud, 50, 0.3);
 
-        // Process the point cloud data here
-        // You can perform various PCL operations on pcl_cloud
-        // callbacks++;
+        auto mosaic = MosaicingTools::generateMosaic(cloud, 0.005);
+        auto mosaicNN = mosaic.clone();
+        auto mosaicKNN = mosaic.clone();
 
-        //if(callbacks == 1) {
-            //callbacks = 0;
-            std::cout << "Generating mosaic..." << std::endl;
+        auto dataPoints = MosaicingTools::extractDataPoints(mosaic);
+        auto mosaicKdTree = MosaicingTools::buildKDTree(dataPoints);
+        
+        MosaicingTools::nnInterpolation(mosaicNN, dataPoints, mosaicKdTree, 10, 8);
+        MosaicingTools::knnInterpolation(mosaicKNN, dataPoints, mosaicKdTree, 10, 20, 2.0, 8);
 
-            //---FILTERING OUTLIERS---
-            MosaicingTools::filterCloud(cloud, cloud, 50, 0.3);
+        cv::imwrite("../colorizedDem.jpg", mosaic);
+        cv::imwrite("../colorizedDemNN.jpg", mosaicNN);
+        cv::imwrite("../colorizedDemKNN.jpg", mosaicKNN);
 
-            auto mosaic = MosaicingTools::generateMosaic(cloud, 0.005);
-            auto mosaicNN = mosaic.clone();
-            auto mosaicKNN = mosaic.clone();
+        auto img = cv::imread("../colorizedDem.jpg");
+        cv::imshow("LIVE MOSAIC", img);
+        cv::waitKey(50);
 
-            auto dataPoints = MosaicingTools::extractDataPoints(mosaic);
-            auto mosaicKdTree = MosaicingTools::buildKDTree(dataPoints);
-            
-            MosaicingTools::nnInterpolation(mosaicNN, dataPoints, mosaicKdTree, 10, 8);
-            MosaicingTools::knnInterpolation(mosaicKNN, dataPoints, mosaicKdTree, 10, 20, 2.0, 8);
-
-            cv::imwrite("../colorizedDem.jpg", mosaic);
-            cv::imwrite("../colorizedDemNN.jpg", mosaicNN);
-            cv::imwrite("../colorizedDemKNN.jpg", mosaicKNN);
-
-            std::cout << "Done generating!" << std::endl;
-        //}
-
-        /*std::cout << "Thread sleeping for 10s..." << std::endl;
-        std::this_thread::sleep_for(std::chrono::milliseconds(10000));
-        std::cout << "Thread awake, unlocking..." << std::endl;
-        callbackLock.unlock();*/
+        std::cout << "Done generating!" << std::endl;
     }
 
     void processMapData(const rtabmap_msgs::msg::MapData map) {
@@ -88,18 +68,10 @@ private:
             poses.insert(std::make_pair(map.graph.poses_id[i], rtabmap_conversions::transformFromPoseMsg(map.graph.poses[i])));
         }
 
-        /*for(auto pose : poses) {
-            std::cout << pose.first << std::endl;
-        }
-
-        std::cout << "#POSES: " << poses.size() << std::endl;
-        std::cout << "LAST POSE: " << poses.end()->second << std::endl;*/
-
         //Add new clouds...
         bool fromDepth = true;
         std::set<int> nodeDataReceived;
         for(unsigned int i = 0; i < map.nodes.size() && i < map.nodes.size(); ++i) {
-            //int id = map->nodes[i].id;
 
             //Always refresh cloud if there is data
             rtabmap::Signature s = rtabmap_conversions::nodeDataFromROS(map.nodes[i]);
@@ -139,15 +111,13 @@ private:
                             IMPLEMENTATION HERE IF NECESSARY
                         */
                        
-                       std::cout << "Before lock..." << std::endl;
                        std::vector<int> index;
                        pcl::removeNaNFromPointCloud(*cloud, *cloud, index);
                        *cloud = *rtabmap::util3d::transformPointCloud(cloud, s.getPose());
 
                        callbackLock.lock();
                        *pcl_cloud += *cloud;
-                       //mosaicer(pcl_cloud);
-                       if(poses.size() % 10 == 0)
+                       if(poses.size() % NUM_POSES_TO_MOSAIC == 0)
                             mosaicer(pcl_cloud);
                        callbackLock.unlock();
                     }
@@ -156,10 +126,8 @@ private:
         }
     }
 
-    //rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr point_cloud_subscription_;
     rclcpp::Subscription<rtabmap_msgs::msg::MapData>::SharedPtr point_cloud_subscription_;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_cloud = std::make_shared<pcl::PointCloud<pcl::PointXYZRGB>>();
-    int callbacks = 0;
 };
 
 
