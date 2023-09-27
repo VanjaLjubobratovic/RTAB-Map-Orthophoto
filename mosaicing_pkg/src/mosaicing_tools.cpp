@@ -1,6 +1,7 @@
 #include "mosaicing_tools.h"
 
 std::mutex MosaicingTools::mosaicingLock;
+std::mutex MosaicingTools::minMaxLock;
 
 template <typename T>
 bool MosaicingTools::isNaN(const T& value) {
@@ -10,6 +11,68 @@ bool MosaicingTools::isNaN(const T& value) {
 template <>
 bool MosaicingTools::isNaN<cv::Vec3f>(const cv::Vec3f& value) {
     return std::isnan(value[0]) || std::isnan(value[1]) || std::isnan(value[2]);
+}
+
+void MosaicingTools::minMaxThread(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, pcl::PointXYZRGB& min, pcl::PointXYZRGB& max, int startP, int endP) {
+    pcl::PointXYZRGB lMin, lMax;
+    lMin = cloud->points[startP];
+    lMax = cloud->points[startP];
+
+    for(int i = startP; i < endP; i++) {
+        auto point = cloud->points[i];
+        if(point.x < lMin.x)
+            lMin.x = point.x;
+        else if(point.x > lMax.x)
+            lMax.x = point.x;
+        
+        if(point.y < lMin.y)
+            lMin.y = point.y;
+        else if(point.y > lMax.y)
+            lMax.y = point.y;
+        
+        if(point.z < lMin.z)
+            lMin.z = point.z;
+        else if(point.z > lMax.z)
+            lMax.z = point.z;
+    }
+
+    minMaxLock.lock();
+    if(lMin.x < min.x)
+        min.x = lMin.x;
+    if(lMin.y < min.y)
+        min.y = lMin.y;
+    if(lMin.z < min.z)
+        min.z = lMin.z;
+    
+    if(lMax.x > max.x)
+        max.x = lMax.x;
+    if(lMax.y > max.y)
+        max.y = lMax.y;
+    if(lMax.z > max.z)
+        max.z = lMax.z;
+    minMaxLock.unlock();
+
+    std::cout << "MINMAX thread with START " << startP << " and END " << endP << " finished!" << std::endl;
+}
+
+void MosaicingTools::fasterGetMinMax3D(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, pcl::PointXYZRGB& min, pcl::PointXYZRGB& max, int numThreads) {
+    min = cloud->points[0];
+    max = cloud->points[0];
+
+    std::vector<std::thread> threads;
+    int pointsPerThread = cloud->points.size() / numThreads;
+
+    for(int threadId = 0; threadId < numThreads; threadId++) {
+        int startP = threadId * pointsPerThread;
+        int endP = (threadId == numThreads - 1) ? (cloud->points.size() - 1) : (startP + pointsPerThread);
+
+        threads.emplace_back(MosaicingTools::minMaxThread, std::ref(cloud), std::ref(min), std::ref(max),
+                            startP, endP);
+    }
+
+    for(auto& thread : threads) {
+        thread.join();
+    }
 }
 
 cv::Mat MosaicingTools::extractDataPoints(const cv::Mat& dem) {
@@ -174,7 +237,6 @@ void MosaicingTools::knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::fla
 
 
 void MosaicingTools::Voxel::addPoint(pcl::PointXYZRGB* point, int heightIndex) {
-    std::cout << height << std::endl;
     if(height > heightIndex) {
         return;
     } else if (height < heightIndex) {
@@ -222,7 +284,8 @@ void MosaicingTools::rasterizationThread(std::vector<std::vector<Voxel>>& voxeli
 
 cv::Mat MosaicingTools::generateMosaic(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, double grid_resolution, int numThreads) {
     pcl::PointXYZRGB min, max;
-    pcl::getMinMax3D(*cloud, min, max);
+    //pcl::getMinMax3D(*cloud, min, max);
+    fasterGetMinMax3D(cloud, min, max, 8);
 
     int xSize = ceil((max.x - min.x) / grid_resolution);
     int ySize = ceil((max.y - min.y) / grid_resolution);

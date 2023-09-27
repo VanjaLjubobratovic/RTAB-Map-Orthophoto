@@ -53,11 +53,13 @@ public:
 
     static cv::Mat gaussSmooth(cv::Mat* raster, int kernelSize, float sigma);
 
+    static void fasterGetMinMax3D(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, pcl::PointXYZRGB& min, pcl::PointXYZRGB& max, int numThreads = 1);
 
 private:
     MosaicingTools();
 
     static std::mutex mosaicingLock;
+    static std::mutex minMaxLock;
 
     struct Voxel{
         int datapoints = 0;
@@ -71,6 +73,7 @@ private:
     static void knnInterpolationThread(const cv::Mat& input, cv::Mat& output, const cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int nNeighbors, float p, int startRow, int endRow);
     static void voxelizationThread(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, std::vector<std::vector<Voxel>>& voxelized, int startP, int endP, pcl::PointXYZRGB min, pcl::PointXYZRGB max, double grid_resolution);
     static void rasterizationThread(std::vector<std::vector<Voxel>>& voxelized, cv::Mat& raster, int startRow, int endRow);
+    static void minMaxThread(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, pcl::PointXYZRGB& min, pcl::PointXYZRGB& max, int startP, int endP);
 };
 
 template <>
