@@ -8,6 +8,7 @@
 #include <pcl/io/ply_io.h>
 #include <pcl/common/common.h>
 #include <pcl/common/transforms.h>
+#include <pcl/common/time.h>
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/flann.hpp>

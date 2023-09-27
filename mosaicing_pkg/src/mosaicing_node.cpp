@@ -37,9 +37,6 @@ private:
     void mosaicer(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud) {
         std::cout << "Generating mosaic..." << std::endl;
 
-        //---FILTERING OUTLIERS---
-        MosaicingTools::filterCloud(cloud, cloud, 50, 0.3);
-
         auto mosaic = MosaicingTools::generateMosaic(cloud, 0.005, 8);
         auto mosaicNN = mosaic.clone();
         auto mosaicKNN = mosaic.clone();
@@ -47,8 +44,8 @@ private:
         auto dataPoints = MosaicingTools::extractDataPoints(mosaic);
         auto mosaicKdTree = MosaicingTools::buildKDTree(dataPoints);
         
-        MosaicingTools::nnInterpolation(mosaicNN, dataPoints, mosaicKdTree, 10, 8);
-        MosaicingTools::knnInterpolation(mosaicKNN, dataPoints, mosaicKdTree, 10, 20, 2.0, 8);
+        //MosaicingTools::nnInterpolation(mosaicNN, dataPoints, mosaicKdTree, 10, 8);
+        //MosaicingTools::knnInterpolation(mosaicKNN, dataPoints, mosaicKdTree, 10, 20, 2.0, 8);
 
         cv::imwrite("../colorizedDem.jpg", mosaic);
         cv::imwrite("../colorizedDemNN.jpg", mosaicNN);
@@ -62,7 +59,7 @@ private:
     }
 
     void processMapData(const rtabmap_msgs::msg::MapData map) {
-        std::cout << "Caught message, processing..." << std::endl;
+        //std::cout << "Caught message, processing..." << std::endl;
         std::map<int, rtabmap::Transform> poses;
         for(unsigned int i = 0; i < map.graph.poses_id.size() && i < map.graph.poses.size(); ++i) {
             poses.insert(std::make_pair(map.graph.poses_id[i], rtabmap_conversions::transformFromPoseMsg(map.graph.poses[i])));
@@ -105,7 +102,6 @@ private:
                         if(CLOUD_VOXEL_SIZE) {
                             cloud = rtabmap::util3d::voxelize(cloud, validIndices, CLOUD_VOXEL_SIZE);
                         }
-
                         //Floor height and ceiling height filter filter
                         /*
                             IMPLEMENTATION HERE IF NECESSARY
@@ -114,6 +110,9 @@ private:
                        std::vector<int> index;
                        pcl::removeNaNFromPointCloud(*cloud, *cloud, index);
                        *cloud = *rtabmap::util3d::transformPointCloud(cloud, s.getPose());
+
+                       //---FILTERING OUTLIERS---
+                       MosaicingTools::filterCloud(cloud, cloud, 50, 0.2);
 
                        callbackLock.lock();
                        *pcl_cloud += *cloud;

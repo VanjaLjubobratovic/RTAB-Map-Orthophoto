@@ -52,7 +52,7 @@ void MosaicingTools::minMaxThread(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, 
         max.z = lMax.z;
     minMaxLock.unlock();
 
-    std::cout << "MINMAX thread with START " << startP << " and END " << endP << " finished!" << std::endl;
+    //std::cout << "MINMAX thread with START " << startP << " and END " << endP << " finished!" << std::endl;
 }
 
 void MosaicingTools::fasterGetMinMax3D(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, pcl::PointXYZRGB& min, pcl::PointXYZRGB& max, int numThreads) {
@@ -115,11 +115,13 @@ pcl::PointXYZRGB MosaicingTools::calculateCentroid(pcl::PointCloud<pcl::PointXYZ
 
 void MosaicingTools::filterCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, pcl::PointCloud<pcl::PointXYZRGB>::Ptr output, int nNeighbors, float stdDevMulThresh) {
     //---FILTERING OUTLIERS---
+    pcl::StopWatch watch;
     pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
     sor.setInputCloud(input);
     sor.setMeanK(nNeighbors); // Number of neighbors to use for mean distance estimation
     sor.setStddevMulThresh(stdDevMulThresh); // Standard deviation multiplier for distance thresholding
     sor.filter(*output);
+    std::cout << "Filtering cloud ended after: " << watch.getTimeSeconds() << "s" << std::endl;
 }
 
 
@@ -144,11 +146,13 @@ void MosaicingTools::nnInterpolationThread(cv::Mat& input, cv::Mat& output, cv::
         }
     }
 
-    std::cout << "NN thread with START " << startRow << " and END " << endRow << " finished!" << std::endl;
+    //std::cout << "NN thread with START " << startRow << " and END " << endRow << " finished!" << std::endl;
 }
 
 void MosaicingTools::nnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int numThreads) {
     std::cout << "Starting NN threads" << std::endl;
+    pcl::StopWatch watch;
+
     cv::Mat interpolated = dem.clone();
     
     std::vector<std::thread> threads;
@@ -165,6 +169,8 @@ void MosaicingTools::nnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flan
     for(auto& thread : threads) {
         thread.join();
     }
+
+    std::cout << "NN interpolation ended after: " << watch.getTimeSeconds() << "s" << std::endl;
 
     dem = interpolated;
 }
@@ -209,11 +215,12 @@ void MosaicingTools::knnInterpolationThread(const cv::Mat& input, cv::Mat& outpu
         }
     }
 
-    std::cout << "KNN thread with START " << startRow << " and END " << endRow << " finished!" << std::endl;
+    //std::cout << "KNN thread with START " << startRow << " and END " << endRow << " finished!" << std::endl;
 }
 
 void MosaicingTools::knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int nNeighbors, float p, int numThreads) {
     std::cout << "Starting KNN threads" << std::endl;
+    pcl::StopWatch watch;
     cv::Mat interpolated = dem.clone();
     
     std::vector<std::thread> threads;
@@ -231,6 +238,7 @@ void MosaicingTools::knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::fla
         thread.join();
     }
 
+    std::cout << "KNN interpolation ended after: " << watch.getTimeSeconds() << std::endl;
     dem = interpolated;
 }
 
@@ -270,7 +278,7 @@ void MosaicingTools::voxelizationThread(pcl::PointCloud<pcl::PointXYZRGB>::Ptr c
         voxelized[y][x].addPoint(&point, z);
         mosaicingLock.unlock();
     }
-    std::cout << "VOXELIZATION thread with START " << startP << " and END " << endP << " finished!" << std::endl;
+    //std::cout << "VOXELIZATION thread with START " << startP << " and END " << endP << " finished!" << std::endl;
 }
 
 void MosaicingTools::rasterizationThread(std::vector<std::vector<Voxel>>& voxelized, cv::Mat& raster, int startRow, int endRow) {
@@ -279,13 +287,15 @@ void MosaicingTools::rasterizationThread(std::vector<std::vector<Voxel>>& voxeli
             raster.at<cv::Vec3f>(i, j) = voxelized[i][j].pointBGR;
         }
     }
-    std::cout << "RASTER thread with START " << startRow << " and END " << endRow << " finished!" << std::endl;
+    //std::cout << "RASTER thread with START " << startRow << " and END " << endRow << " finished!" << std::endl;
 }
 
 cv::Mat MosaicingTools::generateMosaic(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, double grid_resolution, int numThreads) {
     pcl::PointXYZRGB min, max;
     //pcl::getMinMax3D(*cloud, min, max);
+    pcl::StopWatch watch; //timing execution
     fasterGetMinMax3D(cloud, min, max, 8);
+    std::cout << "MinMax ended after: " << watch.getTimeSeconds() << "s" << std::endl;
 
     int xSize = ceil((max.x - min.x) / grid_resolution);
     int ySize = ceil((max.y - min.y) / grid_resolution);
@@ -293,6 +303,8 @@ cv::Mat MosaicingTools::generateMosaic(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cl
 
     //Generating a raster which acts as a top layer of a voxelized space
     std::cout << "Voxelizing..." << std::endl;
+    watch.reset();
+
     std::vector<std::vector<Voxel>> voxelized(ySize, std::vector<Voxel>(xSize));
     std::vector<std::thread> threads;
     int pointsPerThread = cloud->points.size() / numThreads;
@@ -310,9 +322,12 @@ cv::Mat MosaicingTools::generateMosaic(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cl
     }
 
     threads.clear();
+    std::cout << "Voxelization ended after: " << watch.getTimeSeconds() << "s" << std::endl;
 
     //Generating colorized raster
     std::cout << "Projecting to raster..." << std::endl;
+    watch.reset();
+
     cv::Mat raster(ySize, xSize, CV_32FC3, cv::Scalar::all(std::numeric_limits<float>::quiet_NaN()));
     int rowsPerThread = raster.rows / numThreads;
 
@@ -327,6 +342,8 @@ cv::Mat MosaicingTools::generateMosaic(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cl
     for(auto& thread : threads) {
         thread.join();
     }
+
+    std::cout << "Rasterization ended after: " << watch.getTimeSeconds() << "s" << std::endl;
 
     return raster;
 }
