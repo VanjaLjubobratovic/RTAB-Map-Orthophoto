@@ -19,10 +19,10 @@
 #define CLOUD_MAX_DEPTH 0.0
 #define CLOUD_MIN_DEPTH 0.0
 #define CLOUD_VOXEL_SIZE 0.01
-#define NUM_POSES_TO_MOSAIC 5
+#define NUM_POSES_TO_MOSAIC 1
 
-
-std::mutex callbackLock;
+std::mutex cloudLock;
+std::condition_variable dataReadyCondition;
 
 class RTABMapPointCloudSubscriber : public rclcpp::Node {
 public:
@@ -31,6 +31,22 @@ public:
             "/rtabmap/mapData", 10,
             std::bind(&RTABMapPointCloudSubscriber::processMapData, this, std::placeholders::_1)
         );
+    }
+
+public:
+    void dataProcessingThread() {
+        while(true) {
+            {
+                std::cout << "Mosaicing thread" << std::endl;
+                std::unique_lock<std::mutex> lock(cloudLock);
+                dataReadyCondition.wait(lock, [this]{ return !cloudsToProcess.empty(); });
+                for(std::size_t i = 0; i < cloudsToProcess.size(); i++) {
+                    *pcl_cloud += *cloudsToProcess.front();
+                    cloudsToProcess.pop();
+                }
+            }
+            mosaicer(pcl_cloud);
+        }
     }
 
 private:
@@ -117,11 +133,21 @@ private:
                        //MosaicingTools::filterCloud(cloud, cloud, 50, 0.3);
                        *cloud = *rtabmap::util3d::transformPointCloud(cloud, s.getPose());
 
-                       callbackLock.lock();
+                       /*cloudLock.lock();
                        *pcl_cloud += *cloud;
-                       if(poses.size() % NUM_POSES_TO_MOSAIC == 0)
+                       cloudLock.unlock();
+
+                       if(!mosaicingLock.try_lock() poses.size() % NUM_POSES_TO_MOSAIC == 0) {
                             mosaicer(pcl_cloud);
-                       callbackLock.unlock();
+                            mosaicingLock.unlock();
+                       } else return;*/
+
+                        //adding clouds to processing queue
+                       {
+                        std::lock_guard<std::mutex> lock(cloudLock);
+                        cloudsToProcess.push(cloud);
+                        dataReadyCondition.notify_one();
+                       }
                     }
                 }                
             }
@@ -130,12 +156,15 @@ private:
 
     rclcpp::Subscription<rtabmap_msgs::msg::MapData>::SharedPtr point_cloud_subscription_;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_cloud = std::make_shared<pcl::PointCloud<pcl::PointXYZRGB>>();
+    std::queue<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloudsToProcess;
 };
 
 
 int main(int argc, char **argv) {
     rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<RTABMapPointCloudSubscriber>());
+    auto node = std::make_shared<RTABMapPointCloudSubscriber>();
+    std::thread mosaicingThread(&RTABMapPointCloudSubscriber::dataProcessingThread, node);
+    rclcpp::spin(node);
     rclcpp::shutdown();
     return 0;
 }
