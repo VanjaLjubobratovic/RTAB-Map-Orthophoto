@@ -40,7 +40,7 @@ private:
         //---FILTERING OUTLIERS---
         MosaicingTools::filterCloud(cloud, cloud, 50, 0.3);
 
-        auto mosaic = MosaicingTools::generateMosaic(cloud, 0.005);
+        auto mosaic = MosaicingTools::generateMosaic(cloud, 0.005, 8);
         auto mosaicNN = mosaic.clone();
         auto mosaicKNN = mosaic.clone();
 
@@ -76,12 +76,12 @@ private:
             //Always refresh cloud if there is data
             rtabmap::Signature s = rtabmap_conversions::nodeDataFromROS(map.nodes[i]);
             
-            std::cout << "Checking massive IF #" << i << "..." << std::endl;
+            //std::cout << "Checking massive IF #" << i << "..." << std::endl;
             if((fromDepth && !s.sensorData().imageCompressed().empty() && !s.sensorData().depthOrRightCompressed().empty() &&
                 (s.sensorData().cameraModels().size() || s.sensorData().stereoCameraModels().size())) || 
                 (!fromDepth && !s.sensorData().laserScanCompressed().isEmpty())) {
                 
-                std::cout << "Passed IF..." << std::endl;
+                //std::cout << "Passed IF..." << std::endl;
                 cv::Mat image, depth;
                 rtabmap::LaserScan scan;
 
@@ -90,7 +90,7 @@ private:
                 sensor_msgs::msg::PointCloud2::SharedPtr cloudMsg(new sensor_msgs::msg::PointCloud2);
 
                 if(fromDepth && !s.sensorData().imageRaw().empty() && !s.sensorData().depthOrRightRaw().empty()) {
-                    std::cout << "Passed IF for unpacking data..." << std::endl;
+                    //std::cout << "Passed IF for unpacking data..." << std::endl;
                     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud;
                     pcl::IndicesPtr validIndices(new std::vector<int>);
 

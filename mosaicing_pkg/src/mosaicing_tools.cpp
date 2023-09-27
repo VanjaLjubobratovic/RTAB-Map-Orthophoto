@@ -1,5 +1,7 @@
 #include "mosaicing_tools.h"
 
+std::mutex MosaicingTools::mosaicingLock;
+
 template <typename T>
 bool MosaicingTools::isNaN(const T& value) {
     return std::isnan(value);
@@ -172,6 +174,7 @@ void MosaicingTools::knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::fla
 
 
 void MosaicingTools::Voxel::addPoint(pcl::PointXYZRGB* point, int heightIndex) {
+    std::cout << height << std::endl;
     if(height > heightIndex) {
         return;
     } else if (height < heightIndex) {
@@ -193,7 +196,31 @@ void MosaicingTools::Voxel::addPoint(pcl::PointXYZRGB* point, int heightIndex) {
     pointBGR /= datapoints;
 }
 
-cv::Mat MosaicingTools::generateMosaic(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, double grid_resolution) {
+void MosaicingTools::voxelizationThread(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, std::vector<std::vector<Voxel>>& voxelized, int startP, int endP, pcl::PointXYZRGB min, pcl::PointXYZRGB max, double grid_resolution) {
+    for(int i = startP; i < endP; i++) {
+        auto point = cloud->points[i];
+
+        int x = ((max.x - point.x) / grid_resolution);
+        int y = ((max.y - point.y) / grid_resolution);
+        int z = ((point.z - min.z) / grid_resolution); //Bottom of the volume cube has height of 0 for simplicity
+
+        mosaicingLock.lock();
+        voxelized[y][x].addPoint(&point, z);
+        mosaicingLock.unlock();
+    }
+    std::cout << "VOXELIZATION thread with START " << startP << " and END " << endP << " finished!" << std::endl;
+}
+
+void MosaicingTools::rasterizationThread(std::vector<std::vector<Voxel>>& voxelized, cv::Mat& raster, int startRow, int endRow) {
+    for(int i = startRow; i < endRow; i++) {
+        for(int j = 0; j < raster.cols; j++) {
+            raster.at<cv::Vec3f>(i, j) = voxelized[i][j].pointBGR;
+        }
+    }
+    std::cout << "RASTER thread with START " << startRow << " and END " << endRow << " finished!" << std::endl;
+}
+
+cv::Mat MosaicingTools::generateMosaic(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, double grid_resolution, int numThreads) {
     pcl::PointXYZRGB min, max;
     pcl::getMinMax3D(*cloud, min, max);
 
@@ -202,22 +229,40 @@ cv::Mat MosaicingTools::generateMosaic(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cl
     //int zSize = ceil((max.z - min.z) / grid_resolution);
 
     //Generating a raster which acts as a top layer of a voxelized space
+    std::cout << "Voxelizing..." << std::endl;
     std::vector<std::vector<Voxel>> voxelized(ySize, std::vector<Voxel>(xSize));
+    std::vector<std::thread> threads;
+    int pointsPerThread = cloud->points.size() / numThreads;
 
-    for(auto point : cloud -> points) {
-        int x = ((max.x - point.x) / grid_resolution);
-        int y = ((max.y - point.y) / grid_resolution);
-        int z = ((point.z - min.z) / grid_resolution); //Bottom of the volume cube has height of 0 for simplicity
+    for(int threadId = 0; threadId < numThreads; threadId++) {
+        int startP = threadId * pointsPerThread;
+        int endP = (threadId == numThreads - 1) ? (cloud->points.size() - 1) : (startP + pointsPerThread);
 
-        voxelized[y][x].addPoint(&point, z);
+        threads.emplace_back(MosaicingTools::voxelizationThread, std::ref(cloud), std::ref(voxelized),
+                            startP, endP, min, max, grid_resolution);
     }
 
+    for(auto& thread : threads) {
+        thread.join();
+    }
+
+    threads.clear();
+
     //Generating colorized raster
+    std::cout << "Projecting to raster..." << std::endl;
     cv::Mat raster(ySize, xSize, CV_32FC3, cv::Scalar::all(std::numeric_limits<float>::quiet_NaN()));
-    for(int i = 0; i < ySize; i++) {
-        for(int j = 0; j < xSize; j++) {
-            raster.at<cv::Vec3f>(i, j) = voxelized[i][j].pointBGR;
-        }
+    int rowsPerThread = raster.rows / numThreads;
+
+    for(int threadId = 0; threadId < numThreads; threadId++) {
+        int startRow = threadId * rowsPerThread;
+        int endRow = (threadId == numThreads - 1) ? raster.rows : (startRow + rowsPerThread);
+
+        threads.emplace_back(MosaicingTools::rasterizationThread, std::ref(voxelized), std::ref(raster),
+                            startRow, endRow);
+    }
+
+    for(auto& thread : threads) {
+        thread.join();
     }
 
     return raster;

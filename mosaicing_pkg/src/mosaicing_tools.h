@@ -15,6 +15,8 @@
 
 #include <Eigen/Geometry>
 
+#include <mutex>
+
 /**
  * @file mosaicing_tools.h
  * @brief Utility class with custom methods to support generating 
@@ -47,12 +49,15 @@ public:
     static void nnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int numThreads = 1);
     static void knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int nNeighbors, float p, int numThreads = 1);
 
-    static cv::Mat generateMosaic(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, double grid_resolution=0.05);
+    static cv::Mat generateMosaic(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, double grid_resolution=0.05, int numThreads = 1);
 
     static cv::Mat gaussSmooth(cv::Mat* raster, int kernelSize, float sigma);
 
+
 private:
     MosaicingTools();
+
+    static std::mutex mosaicingLock;
 
     struct Voxel{
         int datapoints = 0;
@@ -64,6 +69,8 @@ private:
 
     static void nnInterpolationThread(cv::Mat& input, cv::Mat& output, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int startRow, int endRow);
     static void knnInterpolationThread(const cv::Mat& input, cv::Mat& output, const cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int nNeighbors, float p, int startRow, int endRow);
+    static void voxelizationThread(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, std::vector<std::vector<Voxel>>& voxelized, int startP, int endP, pcl::PointXYZRGB min, pcl::PointXYZRGB max, double grid_resolution);
+    static void rasterizationThread(std::vector<std::vector<Voxel>>& voxelized, cv::Mat& raster, int startRow, int endRow);
 };
 
 template <>
