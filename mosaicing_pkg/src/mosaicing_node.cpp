@@ -109,10 +109,13 @@ private:
                        
                        std::vector<int> index;
                        pcl::removeNaNFromPointCloud(*cloud, *cloud, index);
-                       *cloud = *rtabmap::util3d::transformPointCloud(cloud, s.getPose());
 
-                       //---FILTERING OUTLIERS---
-                       MosaicingTools::filterCloud(cloud, cloud, 50, 0.2);
+                       //Filtering outliers > X meters away from camera pose
+                       auto pose = s.getPose();
+                       pcl::PointXYZRGB referencePoint = pcl::PointXYZRGB(pose.x(), pose.y(), pose.z());
+                       MosaicingTools::thresholdFilter(cloud, cloud, referencePoint, 4.0);
+                       //MosaicingTools::filterCloud(cloud, cloud, 50, 0.3);
+                       *cloud = *rtabmap::util3d::transformPointCloud(cloud, s.getPose());
 
                        callbackLock.lock();
                        *pcl_cloud += *cloud;

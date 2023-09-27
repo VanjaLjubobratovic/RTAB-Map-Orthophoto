@@ -5,6 +5,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/filters/statistical_outlier_removal.h>
+#include <pcl/filters/extract_indices.h>
 #include <pcl/io/ply_io.h>
 #include <pcl/common/common.h>
 #include <pcl/common/transforms.h>
@@ -43,6 +44,12 @@ public:
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr output,
         int nNeighbors = 50,
         float stdDevMulThresh = 0.3);
+
+    static void thresholdFilter(
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, 
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr output,
+        pcl::PointXYZRGB& referencePoint,
+        float distanceInM = 4.0);
 
     //TODO: make this a bit more generalized
     static void filtrationViz(pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered, pcl::PointCloud<pcl::PointXYZRGB>::Ptr raw);

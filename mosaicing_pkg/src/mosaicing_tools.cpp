@@ -121,9 +121,33 @@ void MosaicingTools::filterCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, p
     sor.setMeanK(nNeighbors); // Number of neighbors to use for mean distance estimation
     sor.setStddevMulThresh(stdDevMulThresh); // Standard deviation multiplier for distance thresholding
     sor.filter(*output);
-    std::cout << "Filtering cloud ended after: " << watch.getTimeSeconds() << "s" << std::endl;
+    std::cout << "Stat. filtering cloud ended after: " << watch.getTimeSeconds() << "s" << std::endl;
 }
 
+void MosaicingTools::thresholdFilter(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, pcl::PointCloud<pcl::PointXYZRGB>::Ptr output, pcl::PointXYZRGB& referencePoint, float distanceInM) {
+    pcl::StopWatch watch;
+    pcl::ExtractIndices<pcl::PointXYZRGB> extract;
+    pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
+
+    for(std::size_t i = 0; i < input->size(); i++) {
+        auto point = input->points[i];
+        //Possibly not necessary to include Z
+        double distance = sqrt(pow(point.x - referencePoint.x, 2) +
+                               pow(point.y - referencePoint.y, 2) +
+                               pow(point.z - referencePoint.z, 2));
+        
+        if(distance <= distanceInM) {
+            inliers->indices.push_back(static_cast<int>(i));
+        }
+    }
+
+    extract.setInputCloud(input);
+    extract.setIndices(inliers);
+    extract.setNegative(false);
+    extract.filter(*output);
+
+    std::cout << "Threshold filter ended after: " << watch.getTimeSeconds() << "s" << std::endl;
+}
 
 void MosaicingTools::nnInterpolationThread(cv::Mat& input, cv::Mat& output, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int startRow, int endRow) {
     for(int i = startRow; i < endRow; i++) {
