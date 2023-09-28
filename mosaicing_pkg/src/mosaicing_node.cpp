@@ -19,7 +19,7 @@
 #define CLOUD_MAX_DEPTH 0.0
 #define CLOUD_MIN_DEPTH 0.0
 #define CLOUD_VOXEL_SIZE 0.01
-#define NUM_POSES_TO_MOSAIC 1
+#define ACCUMULATED_CLOUDS 5
 
 std::mutex cloudLock;
 std::condition_variable dataReadyCondition;
@@ -37,15 +37,16 @@ public:
     void dataProcessingThread() {
         while(true) {
             {
-                std::cout << "Mosaicing thread" << std::endl;
+                std::cout << "Mosaicing thread; DATA TO PROCESS: " << cloudsToProcess.size() << std::endl;
                 std::unique_lock<std::mutex> lock(cloudLock);
-                dataReadyCondition.wait(lock, [this]{ return !cloudsToProcess.empty(); });
+                dataReadyCondition.wait(lock, [this]{ return (cloudsToProcess.size() >= ACCUMULATED_CLOUDS); });
                 for(std::size_t i = 0; i < cloudsToProcess.size(); i++) {
                     *pcl_cloud += *cloudsToProcess.front();
                     cloudsToProcess.pop();
                 }
+
+                mosaicer(pcl_cloud);
             }
-            mosaicer(pcl_cloud);
         }
     }
 
@@ -72,6 +73,7 @@ private:
         cv::waitKey(50);
 
         std::cout << "Done generating!" << std::endl;
+        pcl_cloud->clear(); //clearing processed data
     }
 
     void processMapData(const rtabmap_msgs::msg::MapData map) {
@@ -129,18 +131,9 @@ private:
                        //Filtering outliers > X meters away from camera pose
                        auto pose = s.getPose();
                        pcl::PointXYZRGB referencePoint = pcl::PointXYZRGB(pose.x(), pose.y(), pose.z());
-                       MosaicingTools::thresholdFilter(cloud, cloud, referencePoint, 4.0);
+                       MosaicingTools::thresholdFilter(cloud, cloud, referencePoint, 3.0);
                        //MosaicingTools::filterCloud(cloud, cloud, 50, 0.3);
                        *cloud = *rtabmap::util3d::transformPointCloud(cloud, s.getPose());
-
-                       /*cloudLock.lock();
-                       *pcl_cloud += *cloud;
-                       cloudLock.unlock();
-
-                       if(!mosaicingLock.try_lock() poses.size() % NUM_POSES_TO_MOSAIC == 0) {
-                            mosaicer(pcl_cloud);
-                            mosaicingLock.unlock();
-                       } else return;*/
 
                         //adding clouds to processing queue
                        {

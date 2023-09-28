@@ -2,6 +2,15 @@
 
 std::mutex MosaicingTools::mosaicingLock;
 std::mutex MosaicingTools::minMaxLock;
+MosaicingTools::VoxelRaster MosaicingTools::voxelRaster;
+
+int MosaicingTools::VoxelRaster::rows() {
+    return raster.size();
+}
+
+int MosaicingTools::VoxelRaster::cols() {
+    return (rows() > 0) ? raster[0].size() : 0;
+}
 
 template <typename T>
 bool MosaicingTools::isNaN(const T& value) {
@@ -314,22 +323,87 @@ void MosaicingTools::rasterizationThread(std::vector<std::vector<Voxel>>& voxeli
     //std::cout << "RASTER thread with START " << startRow << " and END " << endRow << " finished!" << std::endl;
 }
 
+void MosaicingTools::resizeRaster(pcl::PointXYZRGB min, pcl::PointXYZRGB max, double grid_size) {
+    pcl::StopWatch watch;
+    int moveX = 0;
+    int moveY = 0;
+
+    if(!voxelRaster.initialized) {
+        voxelRaster.min = min;
+        voxelRaster.max = max;
+
+        int xSize = ceil((voxelRaster.max.x - voxelRaster.min.x) / grid_size);
+        int ySize = ceil((voxelRaster.max.y - voxelRaster.min.y) / grid_size);
+
+        voxelRaster.raster = std::vector<std::vector<Voxel>>(ySize, std::vector<Voxel>(xSize));
+        voxelRaster.initialized = true;
+        return;
+    }
+
+    //The raster is made so that (0,0) corresponds to max coordinates (for some reason)
+    if(max.x > voxelRaster.max.x) {
+        moveX = ((max.x - voxelRaster.max.x) / grid_size);
+    }
+    if(max.y > voxelRaster.max.y) {
+        moveY = ((max.y - voxelRaster.max.y) / grid_size);
+    }
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+    cloud->points.push_back(min);
+    cloud->points.push_back(max);
+    cloud->points.push_back(voxelRaster.min);
+    cloud->points.push_back(voxelRaster.max);
+
+    //std::cout << "MIN: " << min << "\nMAX: " << max << "\nVMIN: " << voxelRaster.min << "\nVMAX: " << voxelRaster.max << std::endl;
+
+    pcl::getMinMax3D(*cloud, voxelRaster.min, voxelRaster.max); //Calculating new min and max
+
+    //std::cout << "NEW_MIN: " << voxelRaster.min << " NEW_MAX: " << voxelRaster.max << std::endl;
+
+    int xSize = ceil((voxelRaster.max.x - voxelRaster.min.x) / grid_size);
+    int ySize = ceil((voxelRaster.max.y - voxelRaster.min.y) / grid_size);
+
+    // std::cout << "MoveX " << moveX << " MoveY: " << moveY << std::endl;
+    // std::cout << "OLD: " << voxelRaster.rows() << "x" << voxelRaster.cols() << std::endl;
+    // std::cout << "NEW: " << ySize << "x" << xSize << std::endl;
+
+    if(xSize != voxelRaster.cols() || ySize != voxelRaster.rows()) {
+        std::cout << "Resizing..." << std::endl;
+        std::vector<std::vector<Voxel>> resizedRaster(ySize, std::vector<Voxel>(xSize));
+        for(int i = 0; i < voxelRaster.rows(); i++) {
+            for(int j = 0; j < voxelRaster.cols(); j++) {
+                int dstX = moveX + j;
+                int dstY = moveY + i;
+                if(dstY >= 0 && dstY < ySize && dstX >= 0 && dstX < xSize)
+                    resizedRaster[dstY][dstX] = voxelRaster.raster[i][j]; 
+            }
+        }
+
+        voxelRaster.raster = resizedRaster;
+    } else {
+        std::cout << "No need to resize" << std::endl;
+    }
+
+    std::cout << "Finished resizing raster after: " << watch.getTimeSeconds() << "s" << std::endl;
+}
+
 cv::Mat MosaicingTools::generateMosaic(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, double grid_resolution, int numThreads) {
     pcl::PointXYZRGB min, max;
-    //pcl::getMinMax3D(*cloud, min, max);
     pcl::StopWatch watch; //timing execution
     fasterGetMinMax3D(cloud, min, max, 8);
     std::cout << "MinMax ended after: " << watch.getTimeSeconds() << "s" << std::endl;
 
-    int xSize = ceil((max.x - min.x) / grid_resolution);
-    int ySize = ceil((max.y - min.y) / grid_resolution);
+    //int xSize = ceil((max.x - min.x) / grid_resolution);
+    //int ySize = ceil((max.y - min.y) / grid_resolution);
     //int zSize = ceil((max.z - min.z) / grid_resolution);
 
     //Generating a raster which acts as a top layer of a voxelized space
     std::cout << "Voxelizing..." << std::endl;
     watch.reset();
 
-    std::vector<std::vector<Voxel>> voxelized(ySize, std::vector<Voxel>(xSize));
+    resizeRaster(min, max, grid_resolution);
+
+    //std::vector<std::vector<Voxel>> voxelized(ySize, std::vector<Voxel>(xSize));
     std::vector<std::thread> threads;
     int pointsPerThread = cloud->points.size() / numThreads;
 
@@ -337,8 +411,8 @@ cv::Mat MosaicingTools::generateMosaic(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cl
         int startP = threadId * pointsPerThread;
         int endP = (threadId == numThreads - 1) ? (cloud->points.size() - 1) : (startP + pointsPerThread);
 
-        threads.emplace_back(MosaicingTools::voxelizationThread, std::ref(cloud), std::ref(voxelized),
-                            startP, endP, min, max, grid_resolution);
+        threads.emplace_back(MosaicingTools::voxelizationThread, std::ref(cloud), std::ref(voxelRaster.raster),
+                            startP, endP, voxelRaster.min, voxelRaster.max, grid_resolution);
     }
 
     for(auto& thread : threads) {
@@ -352,14 +426,15 @@ cv::Mat MosaicingTools::generateMosaic(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cl
     std::cout << "Projecting to raster..." << std::endl;
     watch.reset();
 
-    cv::Mat raster(ySize, xSize, CV_32FC3, cv::Scalar::all(std::numeric_limits<float>::quiet_NaN()));
+    //cv::Mat raster(ySize, xSize, CV_32FC3, cv::Scalar::all(std::numeric_limits<float>::quiet_NaN()));
+    cv::Mat raster(voxelRaster.rows(), voxelRaster.cols(), CV_32FC3, cv::Scalar::all(std::numeric_limits<float>::quiet_NaN()));
     int rowsPerThread = raster.rows / numThreads;
 
     for(int threadId = 0; threadId < numThreads; threadId++) {
         int startRow = threadId * rowsPerThread;
         int endRow = (threadId == numThreads - 1) ? raster.rows : (startRow + rowsPerThread);
 
-        threads.emplace_back(MosaicingTools::rasterizationThread, std::ref(voxelized), std::ref(raster),
+        threads.emplace_back(MosaicingTools::rasterizationThread, std::ref(voxelRaster.raster), std::ref(raster),
                             startRow, endRow);
     }
 

@@ -66,9 +66,6 @@ public:
 private:
     MosaicingTools();
 
-    static std::mutex mosaicingLock;
-    static std::mutex minMaxLock;
-
     struct Voxel{
         int datapoints = 0;
         int height = 0; 
@@ -77,11 +74,31 @@ private:
         void addPoint(pcl::PointXYZRGB* point, int heightIndex);
     };
 
+    struct VoxelRaster {
+        std::vector<std::vector<Voxel>> raster;
+        //Min and max point cloud point to know how to resize
+        pcl::PointXYZRGB max{-std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity()}; 
+        pcl::PointXYZRGB min{std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity()};
+
+        bool initialized = false;
+        
+        int rows();
+        int cols();
+    };
+
+    static std::mutex mosaicingLock;
+    static std::mutex minMaxLock;
+
+    static VoxelRaster voxelRaster;
+
     static void nnInterpolationThread(cv::Mat& input, cv::Mat& output, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int startRow, int endRow);
     static void knnInterpolationThread(const cv::Mat& input, cv::Mat& output, const cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int nNeighbors, float p, int startRow, int endRow);
     static void voxelizationThread(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, std::vector<std::vector<Voxel>>& voxelized, int startP, int endP, pcl::PointXYZRGB min, pcl::PointXYZRGB max, double grid_resolution);
     static void rasterizationThread(std::vector<std::vector<Voxel>>& voxelized, cv::Mat& raster, int startRow, int endRow);
     static void minMaxThread(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, pcl::PointXYZRGB& min, pcl::PointXYZRGB& max, int startP, int endP);
+
+    static void resizeRaster(pcl::PointXYZRGB min, pcl::PointXYZRGB max, double grid_size);
+    //static void pasteNewTile(Mosaic& mosaic, cv::Mat tile, pcl::PointXYZRGB tileMin, pcl::PointXYZRGB tileMax, double grid_size);
 };
 
 template <>
