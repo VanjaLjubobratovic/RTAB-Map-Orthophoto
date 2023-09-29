@@ -58,15 +58,15 @@ private:
         auto mosaicNN = mosaic.clone();
         auto mosaicKNN = mosaic.clone();
 
-        auto dataPoints = MosaicingTools::extractDataPoints(mosaic);
-        auto mosaicKdTree = MosaicingTools::buildKDTree(dataPoints);
+        //auto dataPoints = MosaicingTools::extractDataPoints(mosaic);
+        //auto mosaicKdTree = MosaicingTools::buildKDTree(dataPoints);
         
         //MosaicingTools::nnInterpolation(mosaicNN, dataPoints, mosaicKdTree, 10, 8);
         //MosaicingTools::knnInterpolation(mosaicKNN, dataPoints, mosaicKdTree, 10, 20, 2.0, 8);
 
         cv::imwrite("../colorizedDem.jpg", mosaic);
-        cv::imwrite("../colorizedDemNN.jpg", mosaicNN);
-        cv::imwrite("../colorizedDemKNN.jpg", mosaicKNN);
+        //cv::imwrite("../colorizedDemNN.jpg", mosaicNN);
+        //cv::imwrite("../colorizedDemKNN.jpg", mosaicKNN);
 
         auto img = cv::imread("../colorizedDem.jpg");
         cv::imshow("LIVE MOSAIC", img);
@@ -128,12 +128,12 @@ private:
                        std::vector<int> index;
                        pcl::removeNaNFromPointCloud(*cloud, *cloud, index);
 
-                       //Filtering outliers > X meters away from camera pose
-                       auto pose = s.getPose();
+                       //Filtering outliers > X meters away from camera pose and with statistical filter
+                       auto pose = poses.rbegin()->second;
                        pcl::PointXYZRGB referencePoint = pcl::PointXYZRGB(pose.x(), pose.y(), pose.z());
                        MosaicingTools::thresholdFilter(cloud, cloud, referencePoint, 3.0);
-                       //MosaicingTools::filterCloud(cloud, cloud, 50, 0.3);
-                       *cloud = *rtabmap::util3d::transformPointCloud(cloud, s.getPose());
+                       MosaicingTools::filterCloud(cloud, cloud, 50, 0.3);
+                       *cloud = *rtabmap::util3d::transformPointCloud(cloud, pose);
 
                         //adding clouds to processing queue
                        {
