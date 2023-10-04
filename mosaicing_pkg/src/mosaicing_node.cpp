@@ -45,39 +45,45 @@ public:
                     cloudsToProcess.pop();
                 }
 
-                mosaicer(pcl_cloud);
+                mosaicer(pcl_cloud, false, true);
             }
         }
     }
 
 private:
-    void mosaicer(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud) {
+    void mosaicer(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, bool interpolate = false, bool showLive = false) {
         std::cout << "Generating mosaic..." << std::endl;
 
         auto mosaic = MosaicingTools::generateMosaic(cloud, 0.005, 8);
-        auto mosaicNN = mosaic.clone();
-        auto mosaicKNN = mosaic.clone();
+        cv::imwrite("../mosaic.jpg", mosaic);
 
-        //auto dataPoints = MosaicingTools::extractDataPoints(mosaic);
-        //auto mosaicKdTree = MosaicingTools::buildKDTree(dataPoints);
-        
-        //MosaicingTools::nnInterpolation(mosaicNN, dataPoints, mosaicKdTree, 10, 8);
-        //MosaicingTools::knnInterpolation(mosaicKNN, dataPoints, mosaicKdTree, 10, 20, 2.0, 8);
+        if(interpolate) {
+            auto mosaicNN = mosaic.clone();
+            auto mosaicKNN = mosaic.clone();
 
-        cv::imwrite("../colorizedDem.jpg", mosaic);
-        //cv::imwrite("../colorizedDemNN.jpg", mosaicNN);
-        //cv::imwrite("../colorizedDemKNN.jpg", mosaicKNN);
+            auto dataPoints = MosaicingTools::extractDataPoints(mosaic);
+            auto mosaicKdTree = MosaicingTools::buildKDTree(dataPoints);
+            
+            MosaicingTools::nnInterpolation(mosaicNN, dataPoints, mosaicKdTree, 10, 8);
+            MosaicingTools::knnInterpolation(mosaicKNN, dataPoints, mosaicKdTree, 10, 20, 2.0, 8);
 
-        auto img = cv::imread("../colorizedDem.jpg");
-        cv::imshow("LIVE MOSAIC", img);
-        cv::waitKey(50);
+            cv::imwrite("../mosaicNN.jpg", mosaicNN);
+            cv::imwrite("../mosaicKNN.jpg", mosaicKNN);
+        }
+
+
+        if(showLive) {
+            auto img = cv::imread("../mosaic.jpg");
+            cv::imshow("LIVE MOSAIC", img);
+            cv::waitKey(50);
+        }
 
         std::cout << "Done generating!" << std::endl;
         pcl_cloud->clear(); //clearing processed data
     }
 
+    //Adjusted official RTAB-Map rviz plugin code
     void processMapData(const rtabmap_msgs::msg::MapData map) {
-        //std::cout << "Caught message, processing..." << std::endl;
         std::map<int, rtabmap::Transform> poses;
         for(unsigned int i = 0; i < map.graph.poses_id.size() && i < map.graph.poses.size(); ++i) {
             poses.insert(std::make_pair(map.graph.poses_id[i], rtabmap_conversions::transformFromPoseMsg(map.graph.poses[i])));
@@ -91,12 +97,10 @@ private:
             //Always refresh cloud if there is data
             rtabmap::Signature s = rtabmap_conversions::nodeDataFromROS(map.nodes[i]);
             
-            //std::cout << "Checking massive IF #" << i << "..." << std::endl;
             if((fromDepth && !s.sensorData().imageCompressed().empty() && !s.sensorData().depthOrRightCompressed().empty() &&
                 (s.sensorData().cameraModels().size() || s.sensorData().stereoCameraModels().size())) || 
                 (!fromDepth && !s.sensorData().laserScanCompressed().isEmpty())) {
                 
-                //std::cout << "Passed IF..." << std::endl;
                 cv::Mat image, depth;
                 rtabmap::LaserScan scan;
 
@@ -105,7 +109,6 @@ private:
                 sensor_msgs::msg::PointCloud2::SharedPtr cloudMsg(new sensor_msgs::msg::PointCloud2);
 
                 if(fromDepth && !s.sensorData().imageRaw().empty() && !s.sensorData().depthOrRightRaw().empty()) {
-                    //std::cout << "Passed IF for unpacking data..." << std::endl;
                     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud;
                     pcl::IndicesPtr validIndices(new std::vector<int>);
 

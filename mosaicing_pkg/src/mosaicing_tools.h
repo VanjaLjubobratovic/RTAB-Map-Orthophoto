@@ -51,9 +51,6 @@ public:
         pcl::PointXYZRGB& referencePoint,
         float distanceInM = 4.0);
 
-    //TODO: make this a bit more generalized
-    static void filtrationViz(pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered, pcl::PointCloud<pcl::PointXYZRGB>::Ptr raw);
-
     static void nnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int numThreads = 1);
     static void knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int nNeighbors, float p, int numThreads = 1);
 
@@ -76,7 +73,7 @@ private:
 
     struct VoxelRaster {
         std::vector<std::vector<Voxel>> raster;
-        //Min and max point cloud point to know how to resize
+        //Min and max points to know how to resize the raster
         pcl::PointXYZRGB max{-std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity()}; 
         pcl::PointXYZRGB min{std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity()};
 
@@ -98,7 +95,6 @@ private:
     static void minMaxThread(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, pcl::PointXYZRGB& min, pcl::PointXYZRGB& max, int startP, int endP);
 
     static void resizeRaster(pcl::PointXYZRGB min, pcl::PointXYZRGB max, double grid_size);
-    //static void pasteNewTile(Mosaic& mosaic, cv::Mat tile, pcl::PointXYZRGB tileMin, pcl::PointXYZRGB tileMax, double grid_size);
 };
 
 template <>

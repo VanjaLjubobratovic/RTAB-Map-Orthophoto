@@ -354,21 +354,12 @@ void MosaicingTools::resizeRaster(pcl::PointXYZRGB min, pcl::PointXYZRGB max, do
     cloud->points.push_back(voxelRaster.min);
     cloud->points.push_back(voxelRaster.max);
 
-    //std::cout << "MIN: " << min << "\nMAX: " << max << "\nVMIN: " << voxelRaster.min << "\nVMAX: " << voxelRaster.max << std::endl;
-
     pcl::getMinMax3D(*cloud, voxelRaster.min, voxelRaster.max); //Calculating new min and max
-
-    //std::cout << "NEW_MIN: " << voxelRaster.min << " NEW_MAX: " << voxelRaster.max << std::endl;
 
     int xSize = ceil((voxelRaster.max.x - voxelRaster.min.x) / grid_size);
     int ySize = ceil((voxelRaster.max.y - voxelRaster.min.y) / grid_size);
 
-    // std::cout << "MoveX " << moveX << " MoveY: " << moveY << std::endl;
-    // std::cout << "OLD: " << voxelRaster.rows() << "x" << voxelRaster.cols() << std::endl;
-    // std::cout << "NEW: " << ySize << "x" << xSize << std::endl;
-
     if(xSize != voxelRaster.cols() || ySize != voxelRaster.rows()) {
-        std::cout << "Resizing..." << std::endl;
         std::vector<std::vector<Voxel>> resizedRaster(ySize, std::vector<Voxel>(xSize));
         for(int i = 0; i < voxelRaster.rows(); i++) {
             for(int j = 0; j < voxelRaster.cols(); j++) {
@@ -380,8 +371,6 @@ void MosaicingTools::resizeRaster(pcl::PointXYZRGB min, pcl::PointXYZRGB max, do
         }
 
         voxelRaster.raster = resizedRaster;
-    } else {
-        std::cout << "No need to resize" << std::endl;
     }
 
     std::cout << "Finished resizing raster after: " << watch.getTimeSeconds() << "s" << std::endl;
@@ -389,21 +378,14 @@ void MosaicingTools::resizeRaster(pcl::PointXYZRGB min, pcl::PointXYZRGB max, do
 
 cv::Mat MosaicingTools::generateMosaic(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, double grid_resolution, int numThreads) {
     pcl::PointXYZRGB min, max;
-    pcl::StopWatch watch; //timing execution
     fasterGetMinMax3D(cloud, min, max, 8);
-    std::cout << "MinMax ended after: " << watch.getTimeSeconds() << "s" << std::endl;
-
-    //int xSize = ceil((max.x - min.x) / grid_resolution);
-    //int ySize = ceil((max.y - min.y) / grid_resolution);
-    //int zSize = ceil((max.z - min.z) / grid_resolution);
 
     //Generating a raster which acts as a top layer of a voxelized space
     std::cout << "Voxelizing..." << std::endl;
-    watch.reset();
 
     resizeRaster(min, max, grid_resolution);
 
-    //std::vector<std::vector<Voxel>> voxelized(ySize, std::vector<Voxel>(xSize));
+    pcl::StopWatch watch; //timing execution
     std::vector<std::thread> threads;
     int pointsPerThread = cloud->points.size() / numThreads;
 
@@ -426,7 +408,6 @@ cv::Mat MosaicingTools::generateMosaic(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cl
     std::cout << "Projecting to raster..." << std::endl;
     watch.reset();
 
-    //cv::Mat raster(ySize, xSize, CV_32FC3, cv::Scalar::all(std::numeric_limits<float>::quiet_NaN()));
     cv::Mat raster(voxelRaster.rows(), voxelRaster.cols(), CV_32FC3, cv::Scalar::all(std::numeric_limits<float>::quiet_NaN()));
     int rowsPerThread = raster.rows / numThreads;
 
@@ -446,8 +427,6 @@ cv::Mat MosaicingTools::generateMosaic(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cl
 
     return raster;
 }
-
-
 
 cv::Mat MosaicingTools::gaussSmooth(cv::Mat* raster, int kernelSize, float sigma) {
     auto result = raster->clone();
