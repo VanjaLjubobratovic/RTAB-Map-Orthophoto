@@ -122,31 +122,31 @@ Visualization Manager:
       Frames:
         All Enabled: false
         base_link:
-          Value: true
+          Value: false
         camera1_color_frame:
-          Value: true
+          Value: false
         camera1_color_optical_frame:
-          Value: true
+          Value: false
         camera1_depth_frame:
-          Value: true
+          Value: false
         camera1_depth_optical_frame:
-          Value: true
+          Value: false
         camera1_link:
           Value: true
         camera2_color_frame:
-          Value: true
+          Value: false
         camera2_color_optical_frame:
-          Value: true
+          Value: false
         camera2_depth_frame:
-          Value: true
+          Value: false
         camera2_depth_optical_frame:
-          Value: true
+          Value: false
         camera2_link:
           Value: true
         map:
           Value: true
         odom:
-          Value: true
+          Value: false
       Marker Scale: 1
       Name: TF
       Show Arrows: true

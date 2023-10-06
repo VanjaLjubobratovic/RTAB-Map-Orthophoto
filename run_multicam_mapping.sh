@@ -1,6 +1,7 @@
 #!/bin/bash
 
 ros2 launch mosaicing_pkg multicam.launch.py \
+camera_distance:=0.57 \
 pointcloud.enable1:=true \
 pointcloud.enable2:=true \
 serial_no1:=_203522250780 \
