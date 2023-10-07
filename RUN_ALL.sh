@@ -3,6 +3,7 @@
 MAPPING=false
 RECORD=false
 PLAY=false
+ORTHOPHOTO=false
 
 declare -a scripts=("run_camera" "run_imu_filter")
 declare -a titles=("Camera" "Imu_filter")
@@ -13,7 +14,7 @@ do
 
     case $key in
         -h|--help)
-        echo "Usage: $0 [-r|--record] [-m|--mapping] [-p|--play] [-h]"
+        echo "Usage: $0 [-r|--record] [-m|--mapping] [-p|--play] [-o|--orthophoto] [-h|--help]"
         exit 0
         ;;
         -r|--record)
@@ -22,6 +23,10 @@ do
         ;;
         -m|--mapping)
         MAPPING=true
+        shift # past argument
+        ;;
+        -o|--orthophoto)
+        ORTHOPHOTO=true
         shift # past argument
         ;;
         -p|--play)
@@ -39,6 +44,11 @@ done
 if $MAPPING; then
   scripts+=("run_rtabmap")
   titles+=("RTAB_Map")
+fi
+
+if $ORTHOPHOTO && $MAPPING; then
+  scripts+=("run_mosaicer")
+  titles+=("Mosaicer")
 fi
 
 if $RECORD; then
