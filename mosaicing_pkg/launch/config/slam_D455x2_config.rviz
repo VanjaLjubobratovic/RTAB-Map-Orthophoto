@@ -78,7 +78,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /camera1/camera1/depth/color/points
+        Value: /camera1/depth/color/points
       Use Fixed Frame: true
       Use rainbow: true
       Value: false
@@ -112,7 +112,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /camera2/camera2/depth/color/points
+        Value: /camera2/depth/color/points
       Use Fixed Frame: true
       Use rainbow: true
       Value: false
@@ -296,7 +296,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /camera1/camera1/color/image_raw
+        Value: /camera1/color/image_raw
       Value: true
     - Class: rviz_default_plugins/Image
       Enabled: true
@@ -310,7 +310,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /camera2/camera2/color/image_raw
+        Value: /camera2/color/image_raw
       Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true

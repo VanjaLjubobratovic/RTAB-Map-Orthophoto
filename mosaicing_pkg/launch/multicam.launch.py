@@ -47,9 +47,9 @@ def launch_rtab_nodes(context : LaunchContext):
             "approx_sync": False
             }],
         remappings=[
-            ("rgb/image", '/camera1/camera1/color/image_raw'),
-            ("depth/image", '/camera1/camera1/aligned_depth_to_color/image_raw'),
-            ("rgb/camera_info", '/camera1/camera1/color/camera_info'),
+            ("rgb/image", '/camera1/color/image_raw'),
+            ("depth/image", '/camera1/aligned_depth_to_color/image_raw'),
+            ("rgb/camera_info", '/camera1/color/camera_info'),
             ("rgbd_image", 'rgbd_image')],
         namespace='realsense_camera1'
     )
@@ -59,9 +59,9 @@ def launch_rtab_nodes(context : LaunchContext):
             "approx_sync": False
             }],
         remappings=[
-            ("rgb/image", '/camera2/camera2/color/image_raw'),
-            ("depth/image", '/camera2/camera2/aligned_depth_to_color/image_raw'),
-            ("rgb/camera_info", '/camera2/camera2/color/camera_info'),
+            ("rgb/image", '/camera2/color/image_raw'),
+            ("depth/image", '/camera2/aligned_depth_to_color/image_raw'),
+            ("rgb/camera_info", '/camera2/color/camera_info'),
             ("rgbd_image", 'rgbd_image')],
         namespace='realsense_camera2'
     )
@@ -77,9 +77,9 @@ def launch_rtab_nodes(context : LaunchContext):
             "subscribe_rgbd": True,
             }],
         remappings=[
-            ("rgb/image", '/camera1/camera1/color/image_raw'),
-            ("depth/image", '/camera1/camera1/aligned_depth_to_color/image_raw'),
-            ("rgb/camera_info", '/camera1/camera1/color/camera_info'),
+            ("rgb/image", '/camera1/color/image_raw'),
+            ("depth/image", '/camera1/aligned_depth_to_color/image_raw'),
+            ("rgb/camera_info", '/camera1/color/camera_info'),
             ("rgbd_image", '/realsense_camera1/rgbd_image'),
             ("odom", 'odom')],
         arguments=["--delete_db_on_start", ''],
@@ -120,9 +120,9 @@ def launch_rtab_nodes(context : LaunchContext):
             "approx_sync": True,
         }],
         remappings=[
-            ('rgb/image', '/camera1/camera1/color/image_raw'),
-            ('depth/image', '/camera1/camera1/aligned_depth_to_color/image_raw'),
-            ('rgb/camera_info', '/camera1/camera1/color/camera_info'),
+            ('rgb/image', '/camera1/color/image_raw'),
+            ('depth/image', '/camera1/aligned_depth_to_color/image_raw'),
+            ('rgb/camera_info', '/camera1/color/camera_info'),
             ('rgbd_image', 'rgbd_image'),
             ('cloud', 'voxel_cloud1')]
     )
@@ -133,9 +133,9 @@ def launch_rtab_nodes(context : LaunchContext):
             "approx_sync": True,
         }],
         remappings=[
-            ('rgb/image', '/camera2/camera2/color/image_raw'),
-            ('depth/image', '/camera2/camera2/aligned_depth_to_color/image_raw'),
-            ('rgb/camera_info', '/camera2/camera2/color/camera_info'),
+            ('rgb/image', '/camera2/color/image_raw'),
+            ('depth/image', '/camera2/aligned_depth_to_color/image_raw'),
+            ('rgb/camera_info', '/camera2/color/camera_info'),
             ('rgbd_image', 'rgbd_image'),
             ('cloud', 'voxel_cloud2')]
     )
