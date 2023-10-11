@@ -208,8 +208,6 @@ void MosaicingTools::nnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flan
     dem = interpolated;
 }
 
-
-
 void MosaicingTools::knnInterpolationThread(const cv::Mat& input, cv::Mat& output, const cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int nNeighbors, float p, int startRow, int endRow) {
 
     for(int i = startRow; i < endRow; i++) {

@@ -5,9 +5,10 @@ MAPPING=false
 RECORD=false
 PLAY=false
 ORTHOPHOTO=false
+IMU=true
 
-declare -a scripts=("run_imu_filter")
-declare -a titles=("IMU Filter")
+declare -a scripts
+declare -a titles
 
 while [[ $# -gt 0 ]]
 do
@@ -20,6 +21,7 @@ do
         ;;
         -r|--record)
         RECORD=true
+        IMU=false
         shift # past argument
         ;;
         -m|--mapping)
@@ -41,6 +43,11 @@ do
         ;;
     esac
 done
+
+if $IMU; then
+  scripts+=("run_imu_filter")
+  titles+=("IMU filter")
+fi
 
 if $CAMERA; then
   scripts+=("run_camera" "auto_exposure_fix")

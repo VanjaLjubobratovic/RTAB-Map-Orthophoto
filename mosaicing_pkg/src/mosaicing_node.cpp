@@ -72,8 +72,8 @@ private:
             auto dataPoints = MosaicingTools::extractDataPoints(mosaic);
             auto mosaicKdTree = MosaicingTools::buildKDTree(dataPoints);
             
-            MosaicingTools::nnInterpolation(mosaicNN, dataPoints, mosaicKdTree, 10, 8);
-            MosaicingTools::knnInterpolation(mosaicKNN, dataPoints, mosaicKdTree, 10, 20, 2.0, 8);
+            MosaicingTools::nnInterpolation(mosaicNN, dataPoints, mosaicKdTree, 10, 4);
+            MosaicingTools::knnInterpolation(mosaicKNN, dataPoints, mosaicKdTree, 10, 20, 2.0, 4);
 
             cv::imwrite("../mosaicNN.jpg", mosaicNN);
             cv::imwrite("../mosaicKNN.jpg", mosaicKNN);
@@ -142,9 +142,16 @@ private:
                        //Filtering outliers > X meters away from camera pose and with statistical filter
                        auto pose = poses.rbegin()->second;
                        pcl::PointXYZRGB referencePoint = pcl::PointXYZRGB(pose.x(), pose.y(), pose.z());
-                       MosaicingTools::thresholdFilter(cloud, cloud, referencePoint, 3.0);
-                       MosaicingTools::filterCloud(cloud, cloud, 50, 0.3);
-                       *cloud = *rtabmap::util3d::transformPointCloud(cloud, pose);
+
+                     	if(!cloud->empty()) {
+									*cloud = *rtabmap::util3d::transformPointCloud(cloud, pose);
+								} else {
+									std::cerr << "Filtering removed all points, skipping..." << std::endl;
+								}
+
+								//Poses are given in "map" frame so filtering goes after transforming the cloud to "map" frame
+								MosaicingTools::thresholdFilter(cloud, cloud, referencePoint, get_parameter("cloud_max_depth").as_double());
+								MosaicingTools::filterCloud(cloud, cloud, 50, 0.3);
 
                         //adding clouds to processing queue
                        {

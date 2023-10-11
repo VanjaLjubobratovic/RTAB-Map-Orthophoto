@@ -14,7 +14,6 @@ while true; do
     
     if [ "$current_value" == "Boolean value is: True" ] || [ "$current_value" == "Boolean value is: False" ]; then
         # Node is up, setting autoexposure to True
-        sleep 0.2
         ros2 param set $camera_node_name $parameter_name "True"
         echo "Param set to True"
         break
