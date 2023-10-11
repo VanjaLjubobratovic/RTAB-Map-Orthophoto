@@ -1,12 +1,13 @@
 #!/bin/bash
 
+CAMERA=true
 MAPPING=false
 RECORD=false
 PLAY=false
 ORTHOPHOTO=false
 
-declare -a scripts=("run_camera" "run_imu_filter")
-declare -a titles=("Camera" "Imu_filter")
+declare -a scripts
+declare -a titles
 
 while [[ $# -gt 0 ]]
 do
@@ -31,6 +32,7 @@ do
         ;;
         -p|--play)
         PLAY=true
+        CAMERA=false
         shift # past argument
         ;;
         *)    # unknown option
@@ -39,6 +41,11 @@ do
         ;;
     esac
 done
+
+if $CAMERA; then
+  scripts+=("run_camera" "auto_exposure_fix" "run_imu_filter")
+  titles+=("RealSense camera node" "Autoexposure Fix" "Imu_filter")
+fi
 
 # For readability rather than in loop above
 if $MAPPING; then
@@ -59,9 +66,7 @@ fi
 # Can't run camera when replay is on
 if $PLAY; then
   scripts+=("replay_bag")
-  unset scripts[0]
   titles+=("Bag_replay")
-  unset titles[0]
 fi
 
 if $PLAY && $RECORD; then
