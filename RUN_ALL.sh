@@ -6,8 +6,8 @@ RECORD=false
 PLAY=false
 ORTHOPHOTO=false
 
-declare -a scripts
-declare -a titles
+declare -a scripts=("run_imu_filter")
+declare -a titles=("IMU Filter")
 
 while [[ $# -gt 0 ]]
 do
@@ -43,8 +43,8 @@ do
 done
 
 if $CAMERA; then
-  scripts+=("run_camera" "auto_exposure_fix" "run_imu_filter")
-  titles+=("RealSense camera node" "Autoexposure Fix" "Imu_filter")
+  scripts+=("run_camera" "auto_exposure_fix")
+  titles+=("RealSense camera node" "Autoexposure Fix")
 fi
 
 # For readability rather than in loop above
