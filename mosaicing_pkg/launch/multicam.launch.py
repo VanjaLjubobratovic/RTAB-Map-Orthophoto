@@ -2,10 +2,13 @@
 import copy
 from launch import LaunchDescription, LaunchContext
 import launch_ros.actions
+import launch
+from launch.conditions import IfCondition
 from launch.actions import IncludeLaunchDescription, OpaqueFunction
-from launch.substitutions import LaunchConfiguration, ThisLaunchFileDir
+from launch.substitutions import LaunchConfiguration, ThisLaunchFileDir, PythonExpression, TextSubstitution
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from ament_index_python.packages import get_package_share_directory, get_package_prefix
+from datetime import datetime
 import sys
 import os
 import pathlib
@@ -14,13 +17,18 @@ sys.path.append(str(pathlib.Path(__file__).parent.absolute()))
 sys.path.append(get_package_prefix('realsense2_camera'))
 import rs_launch
 
-local_parameters = [{'name': 'camera_name1', 'default': 'camera1', 'description': 'camera1 unique name'},
-                    {'name': 'camera_name2', 'default': 'camera2', 'description': 'camera2 unique name'},
-                    {'name': 'camera_namespace1', 'default': 'camera1', 'description': 'camera1 namespace'},
-                    {'name': 'camera_namespace2', 'default': 'camera2', 'description': 'camera2 namespace'},
-                    {'name': 'fixed_frame', 'default': 'base_link', 'description': ''},
-                    {'name': 'camera_distance', 'default': '1.0', 'description': 'distance between cameras in meters'}
-                    ]
+local_parameters = [
+    {'name': 'camera_name1', 'default': 'camera1', 'description': 'camera1 unique name'},
+    {'name': 'camera_name2', 'default': 'camera2', 'description': 'camera2 unique name'},
+    {'name': 'camera_namespace1', 'default': 'camera1', 'description': 'camera1 namespace'},
+    {'name': 'camera_namespace2', 'default': 'camera2', 'description': 'camera2 namespace'},
+    {'name': 'fixed_frame', 'default': 'base_link', 'description': ''},
+    {'name': 'camera_distance', 'default': '1.0', 'description': 'distance between cameras in meters'},
+    {'name': 'cameras_enabled', 'default': 'True', 'description': 'Enable cameras'},
+    {'name': 'tf_publisher_enabled', 'default': 'True', 'description': 'Enable TF publishers'},
+    {'name': 'rtab_enabled', 'default': 'True', 'description': 'Enable RTAB'},
+    {'name': 'bag_record', 'default': 'False', 'description': 'Enable bag recording'}
+]
 
 config_rviz = os.path.join(
             get_package_share_directory('mosaicing_pkg'), 'launch', 'config', 'slam_D455x2_config.rviz')
@@ -169,24 +177,53 @@ def launch_camera_static_transform_publishers(context : LaunchContext):
         )
     return [cam1_tf, cam2_tf]
 
-def launch_camera2_static_transform_publisher(context : LaunchContext):
-    
-    return [node]
-
-def generate_launch_description():
+def launch_camera_nodes(context : LaunchContext):
     params1 = duplicate_params(rs_launch.configurable_parameters, '1')
     params2 = duplicate_params(rs_launch.configurable_parameters, '2')
-    return LaunchDescription(
-        rs_launch.declare_configurable_parameters(local_parameters) +
-        rs_launch.declare_configurable_parameters(params1) +
-        rs_launch.declare_configurable_parameters(params2) +
-        [
-        OpaqueFunction(function=rs_launch.launch_setup,
-                       kwargs = {'params'           : set_configurable_parameters(params1),
-                                 'param_name_suffix': '1'}),
-        OpaqueFunction(function=rs_launch.launch_setup,
-                       kwargs = {'params'           : set_configurable_parameters(params2),
-                                 'param_name_suffix': '2'}),
-        OpaqueFunction(function=launch_camera_static_transform_publishers),
-        OpaqueFunction(function=launch_rtab_nodes)
+
+    return (
+            rs_launch.declare_configurable_parameters(local_parameters) +
+            rs_launch.declare_configurable_parameters(params1) +
+            rs_launch.declare_configurable_parameters(params2) +
+            [
+                OpaqueFunction(function=rs_launch.launch_setup,
+                            kwargs = {'params'           : set_configurable_parameters(params1),
+                                        'param_name_suffix': '1'}),
+                OpaqueFunction(function=rs_launch.launch_setup,
+                            kwargs = {'params'           : set_configurable_parameters(params2),
+                                        'param_name_suffix': '2'})
+            ]
+    )
+
+def generate_launch_description():
+    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M')
+    bag_path = os.path.expanduser('~/camera_bags/') + timestamp + "_MULTI"
+
+    # I should probably get topic prefix from camera_name params.
+    # It is what it is for now.
+    record_topics = [
+        '/camera1/color/image_raw',
+        '/camera2/color/image_raw',
+        '/camera1/color/camera_info',
+        '/camera2/color/camera_info',
+        '/camera1/aligned_depth_to_color/image_raw',
+        '/camera2/aligned_depth_to_color/image_raw',
+        '/camera1/aligned_depth_to_color/camera_info',
+        '/camera2/aligned_depth_to_color/camera_info',
+        '/camera1/imu',
+        '/camera2/imu',
+        '/camera1/imu_info',
+        '/camera2/imu_info',
+        '/tf_static'
+    ]
+
+    return LaunchDescription([
+        OpaqueFunction(function=launch_camera_nodes, condition=IfCondition(LaunchConfiguration('cameras_enabled'))),
+        OpaqueFunction(function=launch_camera_static_transform_publishers, condition=IfCondition(LaunchConfiguration('tf_publisher_enabled'))),
+        OpaqueFunction(function=launch_rtab_nodes, condition=IfCondition(LaunchConfiguration('rtab_enabled'))),
+        launch.actions.ExecuteProcess(
+            cmd=['ros2', 'bag', 'record', '-o', bag_path] + record_topics,
+            output='screen',
+            condition=IfCondition(LaunchConfiguration('bag_record'))
+        )
     ])
