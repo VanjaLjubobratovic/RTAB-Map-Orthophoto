@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Running the script which fixes auto exposure for both camera nodes
+gnome-terminal --tab --title="Autoexposure Fix" -e "bash -c 'cd $PWD; ./auto_exposure_fix.sh; $SHELL'"
+
 ros2 launch mosaicing_pkg multicam.launch.py \
 camera_distance:=0.57 \
 pointcloud.enable1:=true \
@@ -19,4 +22,8 @@ depth_module.profile2:=848x480x30 \
 decimation_filter.enable1:=true \
 decimation_filter.enable2:=true \
 temporal_filter.enable1:=true \
-temporal_filter.enable2:=true
+temporal_filter.enable2:=true \
+cameras_enabled:=true \
+tf_publisher_enabled:=false \
+rtab_enabled:=false \
+bag_record:=false
