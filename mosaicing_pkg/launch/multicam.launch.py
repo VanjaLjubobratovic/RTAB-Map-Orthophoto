@@ -4,7 +4,7 @@ from launch import LaunchDescription, LaunchContext
 import launch_ros.actions
 import launch
 from launch.conditions import IfCondition
-from launch.actions import IncludeLaunchDescription, OpaqueFunction
+from launch.actions import IncludeLaunchDescription, OpaqueFunction, DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration, ThisLaunchFileDir, PythonExpression, TextSubstitution
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from ament_index_python.packages import get_package_share_directory, get_package_prefix
@@ -83,13 +83,16 @@ def launch_rtab_nodes(context : LaunchContext):
             "publish_tf": True,
             "approx_sync": True,
             "subscribe_rgbd": True,
+            "wait_imu_to_init": LaunchConfiguration('wait_imu_to_init'),
+            "config_path": LaunchConfiguration('cfg').perform(context)
             }],
         remappings=[
             ("rgb/image", '/camera1/color/image_raw'),
             ("depth/image", '/camera1/aligned_depth_to_color/image_raw'),
             ("rgb/camera_info", '/camera1/color/camera_info'),
             ("rgbd_image", '/realsense_camera1/rgbd_image'),
-            ("odom", 'odom')],
+            ("odom", 'odom'),
+            ("imu", LaunchConfiguration('imu_topic'))],
         arguments=["--delete_db_on_start", ''],
         prefix='',
         namespace='rtabmap'
@@ -110,13 +113,15 @@ def launch_rtab_nodes(context : LaunchContext):
             "publish_tf": True,
             "database_path": '~/.ros/rtabmap.db',
             "approx_sync": True,
+            "config_path": LaunchConfiguration('cfg').perform(context),
             "Mem/IncrementalMemory": "true",
             "Mem/InitWMWithAllNodes": "true"
         }],
         remappings=[
             ("rgbd_image0", '/realsense_camera1/rgbd_image'),
             ("rgbd_image1", '/realsense_camera2/rgbd_image'),
-            ("odom", 'odom')],
+            ("odom", 'odom'),
+            ("imu", LaunchConfiguration('imu_topic'))],
         arguments=["--delete_db_on_start"],
         prefix='',
         namespace='rtabmap'
@@ -218,6 +223,10 @@ def generate_launch_description():
     ]
 
     return LaunchDescription([
+        DeclareLaunchArgument('rtab_cfg', default_value=''),
+        DeclareLaunchArgument('wait_imu_to_init', default_value='false'),
+        DeclareLaunchArgument('imu_topic', default_value='/imu/data'),
+
         OpaqueFunction(function=launch_camera_nodes, condition=IfCondition(LaunchConfiguration('cameras_enabled'))),
         OpaqueFunction(function=launch_camera_static_transform_publishers, condition=IfCondition(LaunchConfiguration('tf_publisher_enabled'))),
         OpaqueFunction(function=launch_rtab_nodes, condition=IfCondition(LaunchConfiguration('rtab_enabled'))),

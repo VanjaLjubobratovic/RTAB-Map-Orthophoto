@@ -16,5 +16,5 @@ pointcloud.enable:=false \
 initial_reset:=true \
 depth_module.enable_auto_exposure:=true \
 decimation_filter.enable:=true \
-temporal_filter.enable:=true
-##json_file_path:=/home/vanja/RTAB-Map-Orthophoto/configs/camera_config_autoexp.json
+temporal_filter.enable:=true \
+spatial_filter.enable:=true \
