@@ -151,7 +151,11 @@ private:
 
 								//Poses are given in "map" frame so filtering goes after transforming the cloud to "map" frame
 								MosaicingTools::thresholdFilter(cloud, cloud, referencePoint, get_parameter("cloud_max_depth").as_double());
-								MosaicingTools::filterCloud(cloud, cloud, 50, 0.3);
+
+                                //Painfully slow and removes way too many points
+								//MosaicingTools::filterCloud(cloud, cloud, 50, 0.3);
+
+                                MosaicingTools::statDistanceFilter(cloud, cloud, referencePoint, 2);
 
                         //adding clouds to processing queue
                        {

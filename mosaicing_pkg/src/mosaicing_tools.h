@@ -50,6 +50,13 @@ public:
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr output,
         pcl::PointXYZRGB& referencePoint,
         float distanceInM = 4.0);
+    
+    //Much faster than filterCloud method and practically just crops the edges of each cloud
+    static void statDistanceFilter(
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, 
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr output,
+        pcl::PointXYZRGB& referencePoint,
+        float stDevMultiplier);
 
     static void nnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int numThreads = 1);
     static void knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int nNeighbors, float p, int numThreads = 1);

@@ -1,8 +1,10 @@
 #!/bin/bash
 
+resolution="1280x720x60"
+
 LC_NUMERIC="en_US.UTF-8"; ros2 launch realsense2_camera rs_launch.py \
-rgb_camera.profile:=848x480x30 \
-depth_module.profile:=848x480x30 \
+rgb_camera.profile:=$resolution \
+depth_module.profile:=$resolution \
 enable_gyro:=true \
 enable_accel:=true \
 unite_imu_method:=1 \

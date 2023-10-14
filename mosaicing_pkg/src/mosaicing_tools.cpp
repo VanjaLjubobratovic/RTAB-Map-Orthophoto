@@ -158,6 +158,50 @@ void MosaicingTools::thresholdFilter(pcl::PointCloud<pcl::PointXYZRGB>::Ptr inpu
     std::cout << "Threshold filter ended after: " << watch.getTimeSeconds() << "s" << std::endl;
 }
 
+void MosaicingTools::statDistanceFilter(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, pcl::PointCloud<pcl::PointXYZRGB>::Ptr output, pcl::PointXYZRGB& referencePoint, float stDevMultiplier) {
+	pcl::StopWatch watch;
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr resultCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+	// Initialize variables for mean and standard deviation
+	double S = 0.0;
+	double M = 0.0;
+	double mean = 0.0;
+	int k = 1;
+
+	//Wellford's algorithm for calculating mean and standard deviation
+	for(auto point : input->points) {
+		double dx = point.x - referencePoint.x;
+		double dy = point.y - referencePoint.y;
+		double dist = std::sqrt(dx * dx + dy * dy);
+
+		mean += dist;
+
+		double tmpM = M;
+		M += (dist - tmpM) / k;
+		S += (dist - tmpM) * (dist - M);
+		k++;
+	}
+
+	double stDev = std::sqrt(S / (k-1));
+	mean /= (k-1);
+
+	//Max allowed distance in the XY plane
+	double Y = mean + stDevMultiplier * stDev;
+
+	//Filter the cloud
+	for(auto point : input->points) {
+		double dx = point.x - referencePoint.x;
+		double dy = point.y - referencePoint.y;
+		double dist = std::sqrt(dx * dx + dy * dy);
+
+		if(dist <= Y) {
+			resultCloud->push_back(point);
+		}
+	}
+
+	output = resultCloud;
+	std::cout << "Statistical distance filter ended after: " << watch.getTimeSeconds() << "s" << std::endl;
+}
+
 void MosaicingTools::nnInterpolationThread(cv::Mat& input, cv::Mat& output, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int startRow, int endRow) {
     for(int i = startRow; i < endRow; i++) {
         for(int j = 0; j < input.cols; j++) {
