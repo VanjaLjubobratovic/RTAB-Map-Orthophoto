@@ -1,6 +1,7 @@
 #include "mosaicing_tools.h"
 
 #include <rclcpp/rclcpp.hpp>
+#include <rclcpp_lifecycle/lifecycle_node.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <thread>
@@ -14,12 +15,6 @@
 #include <rtabmap/core/Graph.h>
 #include <rtabmap_conversions/MsgConversion.h>
 #include <rtabmap_msgs/srv/get_map.hpp>
-
-// #define CLOUD_DECIMATION 2
-// #define CLOUD_MAX_DEPTH 0.0
-// #define CLOUD_MIN_DEPTH 0.0
-// #define CLOUD_VOXEL_SIZE 0.01
-// #define ACCUMULATED_CLOUDS 5
 
 std::mutex cloudLock;
 std::condition_variable dataReadyCondition;
@@ -38,7 +33,10 @@ public:
         declare_parameter<double>("cloud_voxel_size", 0.01);
         declare_parameter<int>("cloud_buffer_size", 5);
         declare_parameter<bool>("interpolate", false);
+        declare_parameter<std::string>("interpolation_method", "NN");
         declare_parameter<bool>("show_live", true);
+        declare_parameter<int>("num_threads", 1);
+        declare_parameter<double>("grid_resolution", 0.005);
     }
 
 public:
@@ -47,6 +45,7 @@ public:
             {
                 std::cout << "Mosaicing thread; DATA TO PROCESS: " << cloudsToProcess.size() << std::endl;
                 std::unique_lock<std::mutex> lock(cloudLock);
+                pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
                 dataReadyCondition.wait(lock, [this]{ return (cloudsToProcess.size() >= (std::size_t)get_parameter("cloud_buffer_size").as_int());});
                 for(std::size_t i = 0; i < cloudsToProcess.size(); i++) {
                     *pcl_cloud += *cloudsToProcess.front();
@@ -62,8 +61,10 @@ private:
     void mosaicer(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, bool interpolate, bool showLive) {
         std::cout << "Generating mosaic..." << std::endl;
 
-        auto mosaic = MosaicingTools::generateMosaic(cloud, 0.005, 8);
-        cv::imwrite("../mosaic.jpg", mosaic);
+        int num_threads = get_parameter("num_threads").as_int();
+
+        auto mosaic = MosaicingTools::generateMosaic(cloud, get_parameter("grid_resolution").as_double(), num_threads);
+        cv::imwrite("../mosaic.png", mosaic);
 
         if(interpolate) {
             auto mosaicNN = mosaic.clone();
@@ -72,22 +73,24 @@ private:
             auto dataPoints = MosaicingTools::extractDataPoints(mosaic);
             auto mosaicKdTree = MosaicingTools::buildKDTree(dataPoints);
             
-            MosaicingTools::nnInterpolation(mosaicNN, dataPoints, mosaicKdTree, 10, 4);
-            MosaicingTools::knnInterpolation(mosaicKNN, dataPoints, mosaicKdTree, 10, 20, 2.0, 4);
-
-            cv::imwrite("../mosaicNN.jpg", mosaicNN);
-            cv::imwrite("../mosaicKNN.jpg", mosaicKNN);
+            if(get_parameter("interpolation_method").as_string() == "NN") {
+                MosaicingTools::nnInterpolation(mosaicNN, dataPoints, mosaicKdTree, 10, num_threads);
+                cv::imwrite("../mosaicNN.png", mosaicNN);
+            } else if(get_parameter("interpolation_method").as_string() == "KNN") {
+                MosaicingTools::knnInterpolation(mosaicKNN, dataPoints, mosaicKdTree, 10, 20, 2.0, num_threads);
+                cv::imwrite("../mosaicKNN.png", mosaicKNN);
+            } else 
+                cout << "Invalid interpolation method specified";
         }
 
 
         if(showLive) {
-            auto img = cv::imread("../mosaic.jpg");
+            auto img = cv::imread("../mosaic.png");
             cv::imshow("LIVE MOSAIC", img);
             cv::waitKey(50);
         }
 
         std::cout << "Done generating!" << std::endl;
-        pcl_cloud->clear(); //clearing processed data
     }
 
     //Adjusted official RTAB-Map rviz plugin code
@@ -152,9 +155,6 @@ private:
 								//Poses are given in "map" frame so filtering goes after transforming the cloud to "map" frame
 								MosaicingTools::thresholdFilter(cloud, cloud, referencePoint, get_parameter("cloud_max_depth").as_double());
 
-                                //Painfully slow and removes way too many points
-								//MosaicingTools::filterCloud(cloud, cloud, 50, 0.3);
-
                                 MosaicingTools::statDistanceFilter(cloud, cloud, referencePoint, 2);
 
                         //adding clouds to processing queue
@@ -170,7 +170,6 @@ private:
     }
 
     rclcpp::Subscription<rtabmap_msgs::msg::MapData>::SharedPtr point_cloud_subscription_;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_cloud = std::make_shared<pcl::PointCloud<pcl::PointXYZRGB>>();
     std::queue<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloudsToProcess;
 };
 

@@ -18,8 +18,14 @@ def generate_launch_description():
                               description='Buffer size for point cloud data'),
         DeclareLaunchArgument('interpolate', default_value='false',
                               description='Save additional interpolated mosaics'),
+        DeclareLaunchArgument('interpolation_method', default_value='NN',
+                              description='Nearest neighbors or k-nearest neighbors interpolation'),
         DeclareLaunchArgument('show_live', default_value='true',
                               description='Show live mosaic generation'),
+        DeclareLaunchArgument('num_threads', default_value='1',
+                              description='Number of threads used for mosaicing'),
+        DeclareLaunchArgument('grid_resolution', default_value='0.005',
+                              description='Resolution of the mosaic'),
 
         # LogInfo to display the parameters
         LogInfo(
@@ -51,7 +57,10 @@ def generate_launch_description():
                 {'cloud_voxel_size': LaunchConfiguration('cloud_voxel_size')},
                 {'cloud_buffer_size': LaunchConfiguration('cloud_buffer_size')},
                 {'interpolate': LaunchConfiguration('interpolate')},
+                {'interpolation_method': LaunchConfiguration('interpolation_method')},
                 {'show_live': LaunchConfiguration('show_live')},
+                {'num_threads': LaunchConfiguration('num_threads')},
+                {'grid_resolution': LaunchConfiguration('grid_resolution')},
             ],
             remappings=[],  # Add remappings if necessary
             arguments=[]    # Add additional arguments if necessary

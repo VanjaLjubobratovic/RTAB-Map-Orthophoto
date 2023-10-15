@@ -8,6 +8,7 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(PCL 1.3 REQUIRED)
@@ -37,6 +38,7 @@ target_include_directories(mosaicing_node PRIVATE
 # Link your executable with the necessary libraries
 ament_target_dependencies(mosaicing_node
     rclcpp
+    rclcpp_lifecycle
     sensor_msgs
     PCL
     OpenCV
