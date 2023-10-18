@@ -384,10 +384,10 @@ void MosaicingTools::resizeRaster(pcl::PointXYZRGB min, pcl::PointXYZRGB max, do
 
     //The raster is made so that (0,0) corresponds to max coordinates (for some reason)
     if(max.x > voxelRaster.max.x) {
-        moveX = ((max.x - voxelRaster.max.x) / grid_size);
+        moveX = ceil((max.x - voxelRaster.max.x) / grid_size);
     }
     if(max.y > voxelRaster.max.y) {
-        moveY = ((max.y - voxelRaster.max.y) / grid_size);
+        moveY = ceil((max.y - voxelRaster.max.y) / grid_size);
     }
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
