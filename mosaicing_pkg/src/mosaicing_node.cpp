@@ -31,7 +31,6 @@ public:
         declare_parameter<double>("cloud_min_depth", 0.0);
         declare_parameter<double>("cloud_max_depth", 0.0);
         declare_parameter<double>("cloud_voxel_size", 0.01);
-        declare_parameter<int>("cloud_buffer_size", 5);
         declare_parameter<bool>("interpolate", false);
         declare_parameter<std::string>("interpolation_method", "NN");
         declare_parameter<bool>("show_live", true);
@@ -42,18 +41,19 @@ public:
 public:
     void dataProcessingThread() {
         while(true) {
+            pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+
             {
-                std::cout << "Mosaicing thread; DATA TO PROCESS: " << cloudsToProcess.size() << std::endl;
                 std::unique_lock<std::mutex> lock(cloudLock);
-                pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-                dataReadyCondition.wait(lock, [this]{ return (cloudsToProcess.size() >= (std::size_t)get_parameter("cloud_buffer_size").as_int());});
+                dataReadyCondition.wait(lock, [this]{ return !cloudsToProcess.empty(); });
+                std::cout << "Mosaicing thread; DATA TO PROCESS: " << cloudsToProcess.size() << std::endl;
                 for(std::size_t i = 0; i < cloudsToProcess.size(); i++) {
                     *pcl_cloud += *cloudsToProcess.front();
                     cloudsToProcess.pop();
                 }
-
-                mosaicer(pcl_cloud, get_parameter("interpolate").as_bool(), get_parameter("show_live").as_bool());
             }
+            
+            mosaicer(pcl_cloud, get_parameter("interpolate").as_bool(), get_parameter("show_live").as_bool());
         }
     }
 
@@ -95,6 +95,7 @@ private:
 
     //Adjusted official RTAB-Map rviz plugin code
     void processMapData(const rtabmap_msgs::msg::MapData map) {
+        std::cout << "MSGS: " << ++msgs << std::endl;
         std::map<int, rtabmap::Transform> poses;
         for(unsigned int i = 0; i < map.graph.poses_id.size() && i < map.graph.poses.size(); ++i) {
             poses.insert(std::make_pair(map.graph.poses_id[i], rtabmap_conversions::transformFromPoseMsg(map.graph.poses[i])));
@@ -152,10 +153,10 @@ private:
 									std::cerr << "Filtering removed all points, skipping..." << std::endl;
 								}
 
-								//Poses are given in "map" frame so filtering goes after transforming the cloud to "map" frame
-								MosaicingTools::thresholdFilter(cloud, cloud, referencePoint, get_parameter("cloud_max_depth").as_double());
+                        //Poses are given in "map" frame so filtering goes after transforming the cloud to "map" frame
+                        //MosaicingTools::thresholdFilter(cloud, cloud, referencePoint, get_parameter("cloud_max_depth").as_double());
 
-                                MosaicingTools::statDistanceFilter(cloud, cloud, referencePoint, 2);
+                        MosaicingTools::statDistanceFilter(cloud, cloud, referencePoint, 2.5);
 
                         //adding clouds to processing queue
                        {
@@ -171,6 +172,7 @@ private:
 
     rclcpp::Subscription<rtabmap_msgs::msg::MapData>::SharedPtr point_cloud_subscription_;
     std::queue<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloudsToProcess;
+    int msgs = 0;
 };
 
 
@@ -178,8 +180,18 @@ int main(int argc, char **argv) {
     rclcpp::init(argc, argv);
     rclcpp::NodeOptions options;
     auto node = std::make_shared<RTABMapPointCloudSubscriber>(options);
-    std::thread mosaicingThread(&RTABMapPointCloudSubscriber::dataProcessingThread, node);
-    rclcpp::spin(node);
+
+    std::thread messageReceptionThread([&node] {
+        rclcpp::spin(node);
+    });
+
+    std::thread mosaicingThread([&node] {
+        node->dataProcessingThread();
+    });
+
+    messageReceptionThread.join();
+    mosaicingThread.join();
+
     rclcpp::shutdown();
     return 0;
 }

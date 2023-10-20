@@ -14,8 +14,6 @@ def generate_launch_description():
                               description='Maximum depth for point cloud data'),
         DeclareLaunchArgument('cloud_voxel_size', default_value='0.01',
                               description='Voxel size for point cloud data'),
-        DeclareLaunchArgument('cloud_buffer_size', default_value='5',
-                              description='Buffer size for point cloud data'),
         DeclareLaunchArgument('interpolate', default_value='false',
                               description='Save additional interpolated mosaics'),
         DeclareLaunchArgument('interpolation_method', default_value='NN',
@@ -31,13 +29,12 @@ def generate_launch_description():
         LogInfo(
             msg="Launching mosaicing_node with the following parameters:\n"
                 "cloud_decimation: {0}, cloud_min_depth: {1}, cloud_max_depth: {2}, "
-                "cloud_voxel_size: {3}, cloud_buffer_size: {4}, interpolate: {5}, show_live: {6}"
+                "cloud_voxel_size: {3}, interpolate: {4}, show_live: {5}"
                 .format(
                     LaunchConfiguration('cloud_decimation'), 
                     LaunchConfiguration('cloud_min_depth'),
                     LaunchConfiguration('cloud_max_depth'), 
                     LaunchConfiguration('cloud_voxel_size'),
-                    LaunchConfiguration('cloud_buffer_size'), 
                     LaunchConfiguration('interpolate'),
                     LaunchConfiguration('show_live')
                 )
@@ -55,7 +52,6 @@ def generate_launch_description():
                 {'cloud_min_depth': LaunchConfiguration('cloud_min_depth')},
                 {'cloud_max_depth': LaunchConfiguration('cloud_max_depth')},
                 {'cloud_voxel_size': LaunchConfiguration('cloud_voxel_size')},
-                {'cloud_buffer_size': LaunchConfiguration('cloud_buffer_size')},
                 {'interpolate': LaunchConfiguration('interpolate')},
                 {'interpolation_method': LaunchConfiguration('interpolation_method')},
                 {'show_live': LaunchConfiguration('show_live')},
