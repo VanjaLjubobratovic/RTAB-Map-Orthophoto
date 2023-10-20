@@ -347,7 +347,7 @@ void MosaicingTools::voxelizationThread(pcl::PointCloud<pcl::PointXYZRGB>::Ptr c
 
         int x = ((max.x - point.x) / grid_resolution);
         int y = ((max.y - point.y) / grid_resolution);
-        int z = ((point.z - min.z) / grid_resolution); //Bottom of the volume cube has height of 0 for simplicity
+        int z = ((point.z - min.z) / (grid_resolution * 2)); //Bottom of the volume cube has height of 0 for simplicity
 
         mosaicingLock.lock();
         voxelized[y][x].addPoint(&point, z);
