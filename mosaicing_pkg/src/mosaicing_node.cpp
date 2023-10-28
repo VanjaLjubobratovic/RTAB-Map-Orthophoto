@@ -31,7 +31,7 @@ public:
         declare_parameter<double>("cloud_min_depth", 0.0);
         declare_parameter<double>("cloud_max_depth", 0.0);
         declare_parameter<double>("cloud_voxel_size", 0.01);
-        declare_parameter<bool>("interpolate", false);
+        declare_parameter<bool>("interpolate", true);
         declare_parameter<std::string>("interpolation_method", "NN");
         declare_parameter<bool>("show_live", true);
         declare_parameter<int>("num_threads", 1);
@@ -65,7 +65,7 @@ private:
         auto mosaic = MosaicingTools::generateMosaic(cloud, get_parameter("grid_resolution").as_double(), num_threads);
         cv::imwrite("../mosaic.png", mosaic);
 
-        if(true) {
+        if(interpolate) {
             if(interpMosaic.empty())
                 interpMosaic = mosaic.clone();
 
@@ -147,7 +147,8 @@ private:
 
                         //Poses are given in "map" frame so filtering goes after transforming the cloud to "map" frame
 
-                        MosaicingTools::statDistanceFilter(cloud, cloud, referencePoint, 2.0);
+                        MosaicingTools::statDistanceFilter(cloud, cloud, referencePoint, 0);
+                        MosaicingTools::filterCloud(cloud, cloud, 30, 1.0);
 
                         //adding clouds to processing queue
                        {

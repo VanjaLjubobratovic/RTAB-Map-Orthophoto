@@ -11,6 +11,7 @@
 #include <pcl/common/common.h>
 #include <pcl/common/transforms.h>
 #include <pcl/common/time.h>
+#include <pcl/filters/crop_box.h>
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/flann.hpp>
@@ -44,7 +45,7 @@ public:
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, 
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr output,
         int nNeighbors = 50,
-        float stdDevMulThresh = 0.3);
+        float stdDevMulThresh = 1);
 
     static void radiusFilter(
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, 
@@ -106,6 +107,8 @@ private:
     static void minMaxThread(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, pcl::PointXYZRGB& min, pcl::PointXYZRGB& max, int startP, int endP);
 
     static void resizeRaster(pcl::PointXYZRGB min, pcl::PointXYZRGB max, double grid_size);
+
+    static void sorThread(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, int nNeighbors, float stdDevMulThresh);
 };
 
 template <>

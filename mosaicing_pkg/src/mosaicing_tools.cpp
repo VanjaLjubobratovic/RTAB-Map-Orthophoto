@@ -122,14 +122,75 @@ pcl::PointXYZRGB MosaicingTools::calculateCentroid(pcl::PointCloud<pcl::PointXYZ
     return centroid;
 }
 
-void MosaicingTools::filterCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, pcl::PointCloud<pcl::PointXYZRGB>::Ptr output, int nNeighbors, float stdDevMulThresh) {
-    //---FILTERING OUTLIERS---
-    pcl::StopWatch watch;
+void MosaicingTools::sorThread(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, int nNeighbors, float stdDevMulThresh) {
     pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
-    sor.setInputCloud(input);
+    sor.setInputCloud(cloud);
     sor.setMeanK(nNeighbors); // Number of neighbors to use for mean distance estimation
     sor.setStddevMulThresh(stdDevMulThresh); // Standard deviation multiplier for distance thresholding
-    sor.filter(*output);
+    sor.filter(*cloud);
+}
+
+void MosaicingTools::filterCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, pcl::PointCloud<pcl::PointXYZRGB>::Ptr output, int nNeighbors, float stdDevMulThresh) {
+    pcl::StopWatch watch;
+
+    if(input->empty()) {
+        std::cerr << "Input empty, skipping..." << std::endl;
+        return;
+    }
+
+    int numParts = 8;
+
+    std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> croppedParts;
+
+    pcl::PointXYZRGB minPt, maxPt;
+    fasterGetMinMax3D(input, minPt, maxPt, 8);
+
+    pcl::PointXYZRGB partSize;
+    partSize.x = maxPt.x - minPt.x;
+    partSize.y = (maxPt.y - minPt.y) / numParts;
+    partSize.z = maxPt.z;
+
+    for(int i = 0; i < numParts; i++) {
+        pcl::CropBox<pcl::PointXYZRGB> cropBoxFilter;
+        cropBoxFilter.setInputCloud(input);
+
+        pcl::PointXYZRGB partMin, partMax;
+        partMin.x = minPt.x;
+        partMin.y = minPt.y + partSize.y * i;
+        partMin.z = minPt.z;
+        
+        partMax.x = partSize.x;
+        partMax.y = (i == numParts - 1) ? maxPt.y : partMin.y + partSize.y;
+        partMax.z = partSize.z;
+
+        cropBoxFilter.setMin(partMin.getVector4fMap());
+        cropBoxFilter.setMax(partMax.getVector4fMap());
+
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr croppedCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+        cropBoxFilter.filter(*croppedCloud);
+
+        if(croppedCloud->empty())
+            continue;
+            
+        croppedParts.push_back(croppedCloud);
+    }
+
+    std::vector<std::thread> sorThreads;
+    for(auto part : croppedParts) {
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr partCopy = part;
+        sorThreads.emplace_back(MosaicingTools::sorThread, partCopy, nNeighbors, stdDevMulThresh);
+    }
+
+    for(auto& thread : sorThreads) {
+        thread.join();
+    }
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr mergedCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+    for(auto part : croppedParts) {
+        *mergedCloud += *part;
+    }
+
+    output = mergedCloud;
     std::cout << "Stat. filtering cloud ended after: " << watch.getTimeSeconds() << "s" << std::endl;
 }
 
