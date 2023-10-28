@@ -217,7 +217,7 @@ void MosaicingTools::nnInterpolationThread(cv::Mat& input, cv::Mat& output, cv::
 }
 
 void MosaicingTools::nnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int numThreads) {
-    std::cout << "Starting NN threads" << std::endl;
+    //std::cout << "Starting NN threads" << std::endl;
     pcl::StopWatch watch;
 
     cv::Mat interpolated = dem.clone();
@@ -237,7 +237,7 @@ void MosaicingTools::nnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flan
         thread.join();
     }
 
-    std::cout << "NN interpolation ended after: " << watch.getTimeSeconds() << "s" << std::endl;
+    //std::cout << "NN interpolation ended after: " << watch.getTimeSeconds() << "s" << std::endl;
 
     dem = interpolated;
 }
@@ -284,7 +284,7 @@ void MosaicingTools::knnInterpolationThread(const cv::Mat& input, cv::Mat& outpu
 }
 
 void MosaicingTools::knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int nNeighbors, float p, int numThreads) {
-    std::cout << "Starting KNN threads" << std::endl;
+    //std::cout << "Starting KNN threads" << std::endl;
     pcl::StopWatch watch;
     cv::Mat interpolated = dem.clone();
     
@@ -303,8 +303,60 @@ void MosaicingTools::knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::fla
         thread.join();
     }
 
-    std::cout << "KNN interpolation ended after: " << watch.getTimeSeconds() << std::endl;
+    //std::cout << "KNN interpolation ended after: " << watch.getTimeSeconds() << std::endl;
     dem = interpolated;
+}
+
+void MosaicingTools::interpolate(cv::Mat& mosaic, cv::Mat& interpolated, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, std::string method, int numThreads, double grid_resolution) {
+    pcl::StopWatch watch;
+    pcl::PointXYZRGB min, max;
+    fasterGetMinMax3D(cloud, min, max, numThreads);
+
+
+    //Resizing interpolated mosaic
+    int xSize = mosaic.cols;
+    int ySize = mosaic.rows;
+
+    if(xSize != interpolated.cols || ySize != interpolated.rows) {
+        cv::Mat resizedRaster(ySize, xSize, CV_32FC3, cv::Scalar(0));
+        cv::Rect dstRect((int)voxelRaster.lastResize.x, (int)voxelRaster.lastResize.y, interpolated.cols, interpolated.rows);
+
+        //Tends to happen sometimes because of rounding errors somewhere
+        if(dstRect.width + dstRect.x > resizedRaster.cols)
+            dstRect.width -= (dstRect.width + dstRect.x - resizedRaster.cols);
+        if(dstRect.height + dstRect.y > resizedRaster.rows)
+            dstRect.height -= (dstRect.height + dstRect.y - resizedRaster.rows);
+
+        interpolated.copyTo(resizedRaster(dstRect));
+        interpolated = resizedRaster;
+    }
+
+    //Calculating coordinates of new tile
+    int xMax = ceil((voxelRaster.max.x - min.x) / grid_resolution);
+    int yMax = ceil((voxelRaster.max.y - min.y) / grid_resolution);
+    int xMin = ceil((voxelRaster.max.x - max.x) / grid_resolution);
+    int yMin = ceil((voxelRaster.max.y - max.y) / grid_resolution);
+
+    //Rect takes starting coordinates and then width and height
+    cv::Rect tileRect(xMin, yMin, xMax - xMin, yMax - yMin);
+    if(tileRect.width + xMin > mosaic.cols)
+        tileRect.width -= (tileRect.width + xMin - mosaic.cols);
+    if(tileRect.height + yMin > mosaic.rows)
+        tileRect.height -= (tileRect.height + yMin - mosaic.rows);
+
+    auto tile = mosaic(tileRect);
+
+    auto dataPoints = MosaicingTools::extractDataPoints(tile);
+    auto tileKdTree = MosaicingTools::buildKDTree(dataPoints);
+
+    if(method == "NN") {
+        nnInterpolation(tile, dataPoints, tileKdTree, 10, numThreads);
+    } else if(method == "KNN") {
+        knnInterpolation(tile, dataPoints, tileKdTree, 10, 20, 2.0, numThreads);
+    }
+
+    tile.copyTo(interpolated(tileRect));
+    std::cout << "Interpolation finished after: " << watch.getTimeSeconds() << "s" << std::endl;
 }
 
 
@@ -374,11 +426,14 @@ void MosaicingTools::resizeRaster(pcl::PointXYZRGB min, pcl::PointXYZRGB max, do
 
     //The raster is made so that (0,0) corresponds to max coordinates (for some reason)
     if(max.x > voxelRaster.max.x) {
-        moveX = ceil((max.x - voxelRaster.max.x) / grid_size);
+        moveX = (max.x - voxelRaster.max.x) / grid_size;
     }
     if(max.y > voxelRaster.max.y) {
-        moveY = ceil((max.y - voxelRaster.max.y) / grid_size);
+        moveY = (max.y - voxelRaster.max.y) / grid_size;
     }
+
+    voxelRaster.lastResize.x = moveX;
+    voxelRaster.lastResize.y = moveY;
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     cloud->points.push_back(min);

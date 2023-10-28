@@ -59,6 +59,8 @@ public:
         pcl::PointXYZRGB& referencePoint,
         float stDevMultiplier);
 
+    static void interpolate(cv::Mat& mosaic, cv::Mat& interpolated, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, std::string method, int numThreads, double grid_resolution);
+
     static void nnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int numThreads = 1);
     static void knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int nNeighbors, float p, int numThreads = 1);
 
@@ -84,6 +86,7 @@ private:
         //Min and max points to know how to resize the raster
         pcl::PointXYZRGB max{-std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity()}; 
         pcl::PointXYZRGB min{std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity()};
+        pcl::PointXY lastResize{0, 0};
 
         bool initialized = false;
         

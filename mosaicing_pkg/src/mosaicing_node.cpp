@@ -65,21 +65,13 @@ private:
         auto mosaic = MosaicingTools::generateMosaic(cloud, get_parameter("grid_resolution").as_double(), num_threads);
         cv::imwrite("../mosaic.png", mosaic);
 
-        if(interpolate) {
-            auto mosaicNN = mosaic.clone();
-            auto mosaicKNN = mosaic.clone();
+        if(true) {
+            if(interpMosaic.empty())
+                interpMosaic = mosaic.clone();
 
-            auto dataPoints = MosaicingTools::extractDataPoints(mosaic);
-            auto mosaicKdTree = MosaicingTools::buildKDTree(dataPoints);
-            
-            if(get_parameter("interpolation_method").as_string() == "NN") {
-                MosaicingTools::nnInterpolation(mosaicNN, dataPoints, mosaicKdTree, 10, num_threads);
-                cv::imwrite("../mosaicNN.png", mosaicNN);
-            } else if(get_parameter("interpolation_method").as_string() == "KNN") {
-                MosaicingTools::knnInterpolation(mosaicKNN, dataPoints, mosaicKdTree, 10, 20, 2.0, num_threads);
-                cv::imwrite("../mosaicKNN.png", mosaicKNN);
-            } else 
-                cout << "Invalid interpolation method specified";
+            MosaicingTools::interpolate(mosaic, interpMosaic, cloud,
+                get_parameter("interpolation_method").as_string(), num_threads, get_parameter("grid_resolution").as_double());
+            cv::imwrite("../mosaic" + get_parameter("interpolation_method").as_string() + ".png", interpMosaic);
         }
 
 
@@ -173,6 +165,7 @@ private:
 
     rclcpp::Subscription<rtabmap_msgs::msg::MapData>::SharedPtr point_cloud_subscription_;
     std::queue<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloudsToProcess;
+    cv::Mat interpMosaic;
     int msgs = 0;
 };
 

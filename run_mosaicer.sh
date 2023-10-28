@@ -7,6 +7,6 @@ cloud_max_depth:=4.0 \
 cloud_min_depth:=0.5 \
 num_threads:=8 \
 grid_resolution:=0.005 \
-interpolate:=false \
+interpolate:=true \
 interpolation_method:="NN" \
 show_live:=false
