@@ -133,29 +133,19 @@ void MosaicingTools::filterCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, p
     std::cout << "Stat. filtering cloud ended after: " << watch.getTimeSeconds() << "s" << std::endl;
 }
 
-void MosaicingTools::thresholdFilter(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, pcl::PointCloud<pcl::PointXYZRGB>::Ptr output, pcl::PointXYZRGB& referencePoint, float distanceInM) {
+void MosaicingTools::radiusFilter(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, pcl::PointCloud<pcl::PointXYZRGB>::Ptr output, double radius, int minNeighbors) {
     pcl::StopWatch watch;
-    pcl::ExtractIndices<pcl::PointXYZRGB> extract;
-    pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
 
-    for(std::size_t i = 0; i < input->size(); i++) {
-        auto point = input->points[i];
-        //Possibly not necessary to include Z
-        double distance = sqrt(pow(point.x - referencePoint.x, 2) +
-                               pow(point.y - referencePoint.y, 2) +
-                               pow(point.z - referencePoint.z, 2));
-        
-        if(distance <= distanceInM) {
-            inliers->indices.push_back(static_cast<int>(i));
-        }
-    }
+    // Create the radius outlier removal filter
+    pcl::RadiusOutlierRemoval<pcl::PointXYZRGB> outrem;
+    outrem.setInputCloud(input);
+    outrem.setRadiusSearch(radius);  // Set the radius within which points are considered neighbors
+    outrem.setMinNeighborsInRadius(minNeighbors);  // Minimum number of neighbors required for a point to be considered an inlier
 
-    extract.setInputCloud(input);
-    extract.setIndices(inliers);
-    extract.setNegative(false);
-    extract.filter(*output);
+    // Apply the filter to remove outliers
+    outrem.filter(*output);
 
-    std::cout << "Threshold filter ended after: " << watch.getTimeSeconds() << "s" << std::endl;
+    std::cout << "Radius filter ended after: " << watch.getTimeSeconds() << "s" << std::endl;
 }
 
 void MosaicingTools::statDistanceFilter(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, pcl::PointCloud<pcl::PointXYZRGB>::Ptr output, pcl::PointXYZRGB& referencePoint, float stDevMultiplier) {

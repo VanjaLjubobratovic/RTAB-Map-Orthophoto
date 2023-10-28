@@ -5,6 +5,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/filters/statistical_outlier_removal.h>
+#include <pcl/filters/radius_outlier_removal.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/io/ply_io.h>
 #include <pcl/common/common.h>
@@ -45,11 +46,11 @@ public:
         int nNeighbors = 50,
         float stdDevMulThresh = 0.3);
 
-    static void thresholdFilter(
+    static void radiusFilter(
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, 
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr output,
-        pcl::PointXYZRGB& referencePoint,
-        float distanceInM = 4.0);
+        double radius,
+        int minNeighbors);
     
     //Much faster than filterCloud method and practically just crops the edges of each cloud
     static void statDistanceFilter(

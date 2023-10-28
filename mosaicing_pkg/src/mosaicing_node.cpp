@@ -52,7 +52,6 @@ public:
                     cloudsToProcess.pop();
                 }
             }
-            
             mosaicer(pcl_cloud, get_parameter("interpolate").as_bool(), get_parameter("show_live").as_bool());
         }
     }
@@ -95,6 +94,7 @@ private:
 
     //Adjusted official RTAB-Map rviz plugin code
     void processMapData(const rtabmap_msgs::msg::MapData map) {
+        pcl::StopWatch watch;
         std::cout << "MSGS: " << ++msgs << std::endl;
         std::map<int, rtabmap::Transform> poses;
         for(unsigned int i = 0; i < map.graph.poses_id.size() && i < map.graph.poses.size(); ++i) {
@@ -154,9 +154,8 @@ private:
 								}
 
                         //Poses are given in "map" frame so filtering goes after transforming the cloud to "map" frame
-                        //MosaicingTools::thresholdFilter(cloud, cloud, referencePoint, get_parameter("cloud_max_depth").as_double());
 
-                        MosaicingTools::statDistanceFilter(cloud, cloud, referencePoint, 2.5);
+                        MosaicingTools::statDistanceFilter(cloud, cloud, referencePoint, 2.0);
 
                         //adding clouds to processing queue
                        {
@@ -168,6 +167,8 @@ private:
                 }                
             }
         }
+
+        std::cout << "MESSAGE DECODED AFTER: " << watch.getTimeSeconds() << "s" << std::endl;
     }
 
     rclcpp::Subscription<rtabmap_msgs::msg::MapData>::SharedPtr point_cloud_subscription_;
