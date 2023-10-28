@@ -147,8 +147,8 @@ private:
 
                         //Poses are given in "map" frame so filtering goes after transforming the cloud to "map" frame
 
-                        MosaicingTools::statDistanceFilter(cloud, cloud, referencePoint, 0);
-                        MosaicingTools::filterCloud(cloud, cloud, 30, 1.0);
+                        MosaicingTools::statDistanceFilter(cloud, cloud, referencePoint, 1.0);
+                        MosaicingTools::filterCloud(cloud, cloud, 50, 1.0);
 
                         //adding clouds to processing queue
                        {

@@ -171,14 +171,15 @@ void MosaicingTools::filterCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, p
 
         if(croppedCloud->empty())
             continue;
-            
+        if(croppedCloud->size() <= input->size() * 0.1)
+            continue;
+
         croppedParts.push_back(croppedCloud);
     }
 
     std::vector<std::thread> sorThreads;
     for(auto part : croppedParts) {
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr partCopy = part;
-        sorThreads.emplace_back(MosaicingTools::sorThread, partCopy, nNeighbors, stdDevMulThresh);
+        sorThreads.emplace_back(MosaicingTools::sorThread, part, nNeighbors, stdDevMulThresh);
     }
 
     for(auto& thread : sorThreads) {
@@ -190,7 +191,8 @@ void MosaicingTools::filterCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, p
         *mergedCloud += *part;
     }
 
-    output = mergedCloud;
+    *output = *mergedCloud;
+
     std::cout << "Stat. filtering cloud ended after: " << watch.getTimeSeconds() << "s" << std::endl;
 }
 
@@ -249,8 +251,8 @@ void MosaicingTools::statDistanceFilter(pcl::PointCloud<pcl::PointXYZRGB>::Ptr i
 		}
 	}
 
-	output = resultCloud;
-	std::cout << "Statistical distance filter ended after: " << watch.getTimeSeconds() << "s" << std::endl;
+	*output = *resultCloud;
+	std::cout << "Normal distance filter ended after: " << watch.getTimeSeconds() << "s" << std::endl;
 }
 
 void MosaicingTools::nnInterpolationThread(cv::Mat& input, cv::Mat& output, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int startRow, int endRow) {
