@@ -18,6 +18,6 @@ pointcloud.enable:=false \
 initial_reset:=true \
 depth_module.enable_auto_exposure:=true \
 decimation_filter.enable:=false \
-temporal_filter.enable:=true \
+temporal_filter.enable:=false \
 spatial_filter.enable:=true \
 json_file_path:=/home/vanja/RTAB-Map-Orthophoto/configs/HighAccuracy.json
