@@ -450,12 +450,12 @@ void MosaicingTools::voxelizationThread(pcl::PointCloud<pcl::PointXYZRGB>::Ptr c
     for(int i = startP; i < endP; i++) {
         auto point = cloud->points[i];
 
-        int x = ((max.x - point.x) / grid_resolution);
-        int y = ((max.y - point.y) / grid_resolution);
+        int x = ((point.x - min.x) / grid_resolution);
+        int y = ((point.y - min.y) / grid_resolution);
         int z = ((point.z - min.z) / (grid_resolution * 2)); //Bottom of the volume cube has height of 0 for simplicity
 
         mosaicingLock.lock();
-        voxelized[y][x].addPoint(&point, z);
+        voxelized[x][y].addPoint(&point, z);
         mosaicingLock.unlock();
     }
     //std::cout << "VOXELIZATION thread with START " << startP << " and END " << endP << " finished!" << std::endl;
@@ -482,17 +482,24 @@ void MosaicingTools::resizeRaster(pcl::PointXYZRGB min, pcl::PointXYZRGB max, do
         int xSize = ceil((voxelRaster.max.x - voxelRaster.min.x) / grid_size);
         int ySize = ceil((voxelRaster.max.y - voxelRaster.min.y) / grid_size);
 
-        voxelRaster.raster = std::vector<std::vector<Voxel>>(ySize, std::vector<Voxel>(xSize));
+        voxelRaster.raster = std::vector<std::vector<Voxel>>(xSize, std::vector<Voxel>(ySize));
         voxelRaster.initialized = true;
         return;
     }
 
     //The raster is made so that (0,0) corresponds to max coordinates (for some reason)
-    if(max.x > voxelRaster.max.x) {
-        moveX = (max.x - voxelRaster.max.x) / grid_size;
+    // if(max.x > voxelRaster.max.x) {
+    //     moveX = (max.x - voxelRaster.max.x) / grid_size;
+    // }
+    // if(max.y > voxelRaster.max.y) {
+    //     moveY = (max.y - voxelRaster.max.y) / grid_size;
+    // }
+
+    if(min.x < voxelRaster.min.x) {
+        moveX = -(min.x - voxelRaster.min.x) / grid_size;
     }
-    if(max.y > voxelRaster.max.y) {
-        moveY = (max.y - voxelRaster.max.y) / grid_size;
+    if(min.y < voxelRaster.min.y) {
+        moveY = -(min.y - voxelRaster.min.y) / grid_size;
     }
 
     voxelRaster.lastResize.x = moveX;
@@ -509,14 +516,14 @@ void MosaicingTools::resizeRaster(pcl::PointXYZRGB min, pcl::PointXYZRGB max, do
     int xSize = ceil((voxelRaster.max.x - voxelRaster.min.x) / grid_size);
     int ySize = ceil((voxelRaster.max.y - voxelRaster.min.y) / grid_size);
 
-    if(xSize != voxelRaster.cols() || ySize != voxelRaster.rows()) {
-        std::vector<std::vector<Voxel>> resizedRaster(ySize, std::vector<Voxel>(xSize));
+    if(ySize != voxelRaster.cols() || xSize != voxelRaster.rows()) {
+        std::vector<std::vector<Voxel>> resizedRaster(xSize, std::vector<Voxel>(ySize));
         for(int i = 0; i < voxelRaster.rows(); i++) {
             for(int j = 0; j < voxelRaster.cols(); j++) {
-                int dstX = moveX + j;
-                int dstY = moveY + i;
+                int dstX = moveX + i;
+                int dstY = moveY + j;
                 if(dstY >= 0 && dstY < ySize && dstX >= 0 && dstX < xSize)
-                    resizedRaster[dstY][dstX] = voxelRaster.raster[i][j]; 
+                    resizedRaster[dstX][dstY] = voxelRaster.raster[i][j]; 
             }
         }
 
