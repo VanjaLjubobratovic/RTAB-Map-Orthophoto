@@ -22,6 +22,10 @@ bool MosaicingTools::isNaN<cv::Vec3f>(const cv::Vec3f& value) {
     return std::isnan(value[0]) || std::isnan(value[1]) || std::isnan(value[2]);
 }
 
+double MosaicingTools::absDistance(double a, double b) {
+    return std::abs(std::abs(a) - std::abs(b));
+}
+
 void MosaicingTools::minMaxThread(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, pcl::PointXYZRGB& min, pcl::PointXYZRGB& max, int startP, int endP) {
     pcl::PointXYZRGB lMin, lMax;
     lMin = cloud->points[startP];
@@ -377,35 +381,35 @@ void MosaicingTools::interpolate(cv::Mat& mosaic, cv::Mat& interpolated, pcl::Po
 
 
     //Resizing interpolated mosaic
-    int xSize = mosaic.cols;
-    int ySize = mosaic.rows;
+    int xSize = mosaic.rows;
+    int ySize = mosaic.cols;
 
-    if(xSize != interpolated.cols || ySize != interpolated.rows) {
-        cv::Mat resizedRaster(ySize, xSize, CV_32FC3, cv::Scalar(0));
-        cv::Rect dstRect((int)voxelRaster.lastResize.x, (int)voxelRaster.lastResize.y, interpolated.cols, interpolated.rows);
+    if(ySize != interpolated.cols || xSize != interpolated.rows) {
+        cv::Mat resizedRaster(xSize, ySize, CV_32FC3, cv::Scalar(0));
+        cv::Rect dstRect((int)voxelRaster.lastResize.x, (int)voxelRaster.lastResize.y, interpolated.rows, interpolated.cols);
 
         //Tends to happen sometimes because of rounding errors somewhere
-        if(dstRect.width + dstRect.x > resizedRaster.cols)
-            dstRect.width -= (dstRect.width + dstRect.x - resizedRaster.cols);
-        if(dstRect.height + dstRect.y > resizedRaster.rows)
-            dstRect.height -= (dstRect.height + dstRect.y - resizedRaster.rows);
+        if(dstRect.width + dstRect.x > resizedRaster.rows)
+            dstRect.width -= (dstRect.width + dstRect.x - resizedRaster.rows);
+        if(dstRect.height + dstRect.y > resizedRaster.cols)
+            dstRect.height -= (dstRect.height + dstRect.y - resizedRaster.cols);
 
         interpolated.copyTo(resizedRaster(dstRect));
         interpolated = resizedRaster;
     }
 
     //Calculating coordinates of new tile
-    int xMax = ceil((voxelRaster.max.x - min.x) / grid_resolution);
-    int yMax = ceil((voxelRaster.max.y - min.y) / grid_resolution);
-    int xMin = ceil((voxelRaster.max.x - max.x) / grid_resolution);
-    int yMin = ceil((voxelRaster.max.y - max.y) / grid_resolution);
+    int xMax = ceil((absDistance(max.x, voxelRaster.max.x)) / grid_resolution);
+    int yMax = ceil((absDistance(max.y, voxelRaster.max.y)) / grid_resolution);
+    int xMin = ceil(absDistance(min.x, voxelRaster.min.x) / grid_resolution);
+    int yMin = ceil((absDistance(min.y, voxelRaster.min.y)) / grid_resolution);
 
     //Rect takes starting coordinates and then width and height
     cv::Rect tileRect(xMin, yMin, xMax - xMin, yMax - yMin);
-    if(tileRect.width + xMin > mosaic.cols)
-        tileRect.width -= (tileRect.width + xMin - mosaic.cols);
-    if(tileRect.height + yMin > mosaic.rows)
-        tileRect.height -= (tileRect.height + yMin - mosaic.rows);
+    if(tileRect.width + xMin > mosaic.rows)
+        tileRect.width -= (tileRect.width + xMin - mosaic.rows);
+    if(tileRect.height + yMin > mosaic.cols)
+        tileRect.height -= (tileRect.height + yMin - mosaic.cols);
 
     auto tile = mosaic(tileRect);
 
@@ -487,19 +491,11 @@ void MosaicingTools::resizeRaster(pcl::PointXYZRGB min, pcl::PointXYZRGB max, do
         return;
     }
 
-    //The raster is made so that (0,0) corresponds to max coordinates (for some reason)
-    // if(max.x > voxelRaster.max.x) {
-    //     moveX = (max.x - voxelRaster.max.x) / grid_size;
-    // }
-    // if(max.y > voxelRaster.max.y) {
-    //     moveY = (max.y - voxelRaster.max.y) / grid_size;
-    // }
-
     if(min.x < voxelRaster.min.x) {
-        moveX = -(min.x - voxelRaster.min.x) / grid_size;
+        moveX = ceil(absDistance(min.x, voxelRaster.min.x) / grid_size);
     }
     if(min.y < voxelRaster.min.y) {
-        moveY = -(min.y - voxelRaster.min.y) / grid_size;
+        moveY = ceil(absDistance(min.y, voxelRaster.min.y) / grid_size);
     }
 
     voxelRaster.lastResize.x = moveX;

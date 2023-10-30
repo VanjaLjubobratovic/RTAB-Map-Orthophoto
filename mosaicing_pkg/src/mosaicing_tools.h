@@ -109,6 +109,8 @@ private:
     static void resizeRaster(pcl::PointXYZRGB min, pcl::PointXYZRGB max, double grid_size);
 
     static void sorThread(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, int nNeighbors, float stdDevMulThresh);
+
+    static double absDistance(double a, double b);
 };
 
 template <>
