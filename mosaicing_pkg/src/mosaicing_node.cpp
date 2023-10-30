@@ -31,9 +31,9 @@ public:
         declare_parameter<double>("cloud_min_depth", 0.0);
         declare_parameter<double>("cloud_max_depth", 0.0);
         declare_parameter<double>("cloud_voxel_size", 0.01);
-        declare_parameter<bool>("interpolate", true);
+        declare_parameter<bool>("interpolate", false);
         declare_parameter<std::string>("interpolation_method", "NN");
-        declare_parameter<bool>("show_live", true);
+        declare_parameter<bool>("show_live", false);
         declare_parameter<int>("num_threads", 1);
         declare_parameter<double>("grid_resolution", 0.005);
     }
@@ -151,10 +151,10 @@ private:
                         MosaicingTools::filterCloud(cloud, cloud, 50, 1.0);
 
                         //adding clouds to processing queue
-                       {
-                        std::lock_guard<std::mutex> lock(cloudLock);
-                        cloudsToProcess.push(cloud);
-                        dataReadyCondition.notify_one();
+                        if(!cloud->empty()) {
+                            std::lock_guard<std::mutex> lock(cloudLock);
+                            cloudsToProcess.push(cloud);
+                            dataReadyCondition.notify_one();
                        }
                     }
                 }                
