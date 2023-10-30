@@ -31,7 +31,7 @@ public:
         declare_parameter<double>("cloud_min_depth", 0.0);
         declare_parameter<double>("cloud_max_depth", 0.0);
         declare_parameter<double>("cloud_voxel_size", 0.01);
-        declare_parameter<bool>("interpolate", false);
+        declare_parameter<bool>("interpolate", true);
         declare_parameter<std::string>("interpolation_method", "NN");
         declare_parameter<bool>("show_live", false);
         declare_parameter<int>("num_threads", 1);

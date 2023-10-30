@@ -23,7 +23,7 @@ bool MosaicingTools::isNaN<cv::Vec3f>(const cv::Vec3f& value) {
 }
 
 double MosaicingTools::absDistance(double a, double b) {
-    return std::abs(std::abs(a) - std::abs(b));
+    return std::abs(a-b);
 }
 
 void MosaicingTools::minMaxThread(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, pcl::PointXYZRGB& min, pcl::PointXYZRGB& max, int startP, int endP) {
@@ -386,30 +386,33 @@ void MosaicingTools::interpolate(cv::Mat& mosaic, cv::Mat& interpolated, pcl::Po
 
     if(ySize != interpolated.cols || xSize != interpolated.rows) {
         cv::Mat resizedRaster(xSize, ySize, CV_32FC3, cv::Scalar(0));
-        cv::Rect dstRect((int)voxelRaster.lastResize.x, (int)voxelRaster.lastResize.y, interpolated.rows, interpolated.cols);
+        int moveX = voxelRaster.lastResize.x;
+        int moveY = voxelRaster.lastResize.y;
 
-        //Tends to happen sometimes because of rounding errors somewhere
-        if(dstRect.width + dstRect.x > resizedRaster.rows)
-            dstRect.width -= (dstRect.width + dstRect.x - resizedRaster.rows);
-        if(dstRect.height + dstRect.y > resizedRaster.cols)
-            dstRect.height -= (dstRect.height + dstRect.y - resizedRaster.cols);
+        for(int i = 0; i < interpolated.rows; i++) {
+            for(int j = 0; j < interpolated.cols; j++) {
+                int dstX = moveX + i;
+                int dstY = moveY + j;
 
-        interpolated.copyTo(resizedRaster(dstRect));
+                if(dstY >= 0 && dstY < ySize && dstX >= 0 && dstX < xSize)
+                    resizedRaster.at<cv::Vec3f>(dstX, dstY) = interpolated.at<cv::Vec3f>(i, j);
+            }
+        }
         interpolated = resizedRaster;
     }
 
     //Calculating coordinates of new tile
-    int xMax = ceil((absDistance(max.x, voxelRaster.max.x)) / grid_resolution);
-    int yMax = ceil((absDistance(max.y, voxelRaster.max.y)) / grid_resolution);
+    int xMax = ceil(absDistance(max.x, voxelRaster.min.x) / grid_resolution);
+    int yMax = ceil(absDistance(max.y, voxelRaster.min.y) / grid_resolution);
     int xMin = ceil(absDistance(min.x, voxelRaster.min.x) / grid_resolution);
-    int yMin = ceil((absDistance(min.y, voxelRaster.min.y)) / grid_resolution);
+    int yMin = ceil(absDistance(min.y, voxelRaster.min.y) / grid_resolution);
 
     //Rect takes starting coordinates and then width and height
-    cv::Rect tileRect(xMin, yMin, xMax - xMin, yMax - yMin);
-    if(tileRect.width + xMin > mosaic.rows)
-        tileRect.width -= (tileRect.width + xMin - mosaic.rows);
-    if(tileRect.height + yMin > mosaic.cols)
-        tileRect.height -= (tileRect.height + yMin - mosaic.cols);
+    cv::Rect tileRect(yMin, xMin, yMax - yMin, xMax - xMin);
+    if(tileRect.width + yMin > mosaic.cols)
+        tileRect.width -= (tileRect.width + yMin - mosaic.cols);
+    if(tileRect.height + xMin > mosaic.rows)
+        tileRect.height -= (tileRect.height + xMin - mosaic.rows);
 
     auto tile = mosaic(tileRect);
 
