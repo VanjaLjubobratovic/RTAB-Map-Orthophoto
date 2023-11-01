@@ -1,11 +1,14 @@
 #!/bin/bash
 
+CAMERA=true
 MAPPING=false
 RECORD=false
 PLAY=false
+ORTHOPHOTO=false
+IMU=true
 
-declare -a scripts=("run_camera" "run_imu_filter")
-declare -a titles=("Camera" "Imu_filter")
+declare -a scripts
+declare -a titles
 
 while [[ $# -gt 0 ]]
 do
@@ -13,19 +16,25 @@ do
 
     case $key in
         -h|--help)
-        echo "Usage: $0 [-r|--record] [-m|--mapping] [-p|--play] [-h]"
+        echo "Usage: $0 [-r|--record] [-m|--mapping] [-p|--play] [-o|--orthophoto] [-h|--help]"
         exit 0
         ;;
         -r|--record)
         RECORD=true
+        IMU=false
         shift # past argument
         ;;
         -m|--mapping)
         MAPPING=true
         shift # past argument
         ;;
+        -o|--orthophoto)
+        ORTHOPHOTO=true
+        shift # past argument
+        ;;
         -p|--play)
         PLAY=true
+        CAMERA=false
         shift # past argument
         ;;
         *)    # unknown option
@@ -35,10 +44,25 @@ do
     esac
 done
 
+if $IMU; then
+  scripts+=("run_imu_filter")
+  titles+=("IMU filter")
+fi
+
+if $CAMERA; then
+  scripts+=("run_camera" "auto_exposure_fix")
+  titles+=("RealSense camera node" "Autoexposure Fix")
+fi
+
 # For readability rather than in loop above
 if $MAPPING; then
   scripts+=("run_rtabmap")
   titles+=("RTAB_Map")
+fi
+
+if $ORTHOPHOTO && $MAPPING; then
+  scripts+=("run_mosaicer")
+  titles+=("Mosaicer")
 fi
 
 if $RECORD; then
@@ -49,9 +73,7 @@ fi
 # Can't run camera when replay is on
 if $PLAY; then
   scripts+=("replay_bag")
-  unset scripts[0]
   titles+=("Bag_replay")
-  unset titles[0]
 fi
 
 if $PLAY && $RECORD; then

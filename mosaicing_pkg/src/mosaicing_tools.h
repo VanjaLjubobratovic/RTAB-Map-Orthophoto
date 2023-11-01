@@ -5,11 +5,13 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/filters/statistical_outlier_removal.h>
+#include <pcl/filters/radius_outlier_removal.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/io/ply_io.h>
 #include <pcl/common/common.h>
 #include <pcl/common/transforms.h>
 #include <pcl/common/time.h>
+#include <pcl/filters/crop_box.h>
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/flann.hpp>
@@ -43,13 +45,22 @@ public:
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, 
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr output,
         int nNeighbors = 50,
-        float stdDevMulThresh = 0.3);
+        float stdDevMulThresh = 1);
 
-    static void thresholdFilter(
+    static void radiusFilter(
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, 
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr output,
+        double radius,
+        int minNeighbors);
+    
+    //Much faster than filterCloud method and practically just crops the edges of each cloud
+    static void statDistanceFilter(
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, 
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr output,
         pcl::PointXYZRGB& referencePoint,
-        float distanceInM = 4.0);
+        float stDevMultiplier);
+
+    static void interpolate(cv::Mat& mosaic, cv::Mat& interpolated, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, std::string method, int numThreads, double grid_resolution);
 
     static void nnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int numThreads = 1);
     static void knnInterpolation(cv::Mat& dem, cv::Mat& dataPoints, cv::flann::Index& kdTree, float searchRadius, int nNeighbors, float p, int numThreads = 1);
@@ -76,6 +87,7 @@ private:
         //Min and max points to know how to resize the raster
         pcl::PointXYZRGB max{-std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity()}; 
         pcl::PointXYZRGB min{std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity()};
+        pcl::PointXY lastResize{0, 0};
 
         bool initialized = false;
         
@@ -95,6 +107,10 @@ private:
     static void minMaxThread(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, pcl::PointXYZRGB& min, pcl::PointXYZRGB& max, int startP, int endP);
 
     static void resizeRaster(pcl::PointXYZRGB min, pcl::PointXYZRGB max, double grid_size);
+
+    static void sorThread(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, int nNeighbors, float stdDevMulThresh);
+
+    static double absDistance(double a, double b);
 };
 
 template <>

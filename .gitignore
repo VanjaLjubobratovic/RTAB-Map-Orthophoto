@@ -7,3 +7,4 @@ build
 /mosaicing_pkg/include
 /mosaicing_pkg/install
 /mosaicing_pkg/log
+/mosaicing_pkg/.vscode
