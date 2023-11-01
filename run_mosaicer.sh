@@ -9,4 +9,4 @@ num_threads:=8 \
 grid_resolution:=0.01 \
 interpolate:=false \
 interpolation_method:="NN" \
-show_live:=false
+show_live:=true

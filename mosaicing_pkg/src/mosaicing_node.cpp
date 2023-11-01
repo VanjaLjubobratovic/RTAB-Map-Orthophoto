@@ -176,6 +176,9 @@ int main(int argc, char **argv) {
     rclcpp::NodeOptions options;
     auto node = std::make_shared<RTABMapPointCloudSubscriber>(options);
 
+    cv::namedWindow("LIVE MOSAIC", cv::WINDOW_GUI_EXPANDED);
+    cv::resizeWindow("LIVE MOSAIC", 800, 600);
+
     std::thread messageReceptionThread([&node] {
         rclcpp::spin(node);
     });
@@ -186,6 +189,8 @@ int main(int argc, char **argv) {
 
     messageReceptionThread.join();
     mosaicingThread.join();
+
+    cv::destroyWindow("LIVE MOSAIC");
 
     rclcpp::shutdown();
     return 0;
