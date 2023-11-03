@@ -163,9 +163,9 @@ void MosaicingTools::filterCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, p
         partMin.y = minPt.y + partSize.y * i;
         partMin.z = minPt.z;
         
-        partMax.x = partSize.x;
+        partMax.x = maxPt.x;
         partMax.y = (i == numParts - 1) ? maxPt.y : partMin.y + partSize.y;
-        partMax.z = partSize.z;
+        partMax.z = maxPt.z;
 
         cropBoxFilter.setMin(partMin.getVector4fMap());
         cropBoxFilter.setMax(partMax.getVector4fMap());
@@ -173,10 +173,10 @@ void MosaicingTools::filterCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, p
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr croppedCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
         cropBoxFilter.filter(*croppedCloud);
 
-        if(croppedCloud->empty())
+        if(croppedCloud->empty() || croppedCloud->size() <= input->size() * 0.05) {
             continue;
-        if(croppedCloud->size() <= input->size() * 0.05)
-            continue;
+        }
+            
 
         croppedParts.push_back(croppedCloud);
     }
