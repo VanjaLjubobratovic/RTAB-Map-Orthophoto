@@ -36,6 +36,11 @@ public:
         declare_parameter<bool>("show_live", true);
         declare_parameter<int>("num_threads", 1);
         declare_parameter<double>("grid_resolution", 0.01);
+        declare_parameter<bool>("sor_filter_enable", true);
+        declare_parameter<int>("sor_neighbors", 50);
+        declare_parameter<double>("sor_stdev_mul", 1.0);
+        declare_parameter<bool>("dist_filter_enable", true);
+        declare_parameter<double>("dist_stdev_mul", 1.0);
     }
 
 public:
@@ -146,9 +151,10 @@ private:
 								}
 
                         //Poses are given in "map" frame so filtering goes after transforming the cloud to "map" frame
-
-                        MosaicingTools::statDistanceFilter(cloud, cloud, referencePoint, 1.5);
-                        MosaicingTools::filterCloud(cloud, cloud, 40, 1.5);
+                        if(get_parameter("dist_filter_enable").as_bool())
+                            MosaicingTools::statDistanceFilter(cloud, cloud, referencePoint, get_parameter("dist_stdev_mul").as_double());
+                        if(get_parameter("sor_filter_enable").as_bool())
+                            MosaicingTools::filterCloud(cloud, cloud, get_parameter("sor_neighbors").as_int(), get_parameter("sor_stdev_mul").as_double());
 
                         //adding clouds to processing queue
                         if(!cloud->empty()) {

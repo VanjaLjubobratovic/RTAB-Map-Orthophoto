@@ -24,6 +24,16 @@ def generate_launch_description():
                               description='Number of threads used for mosaicing'),
         DeclareLaunchArgument('grid_resolution', default_value='0.005',
                               description='Resolution of the mosaic'),
+        DeclareLaunchArgument('sor_filter_enable', default_value='true',
+                              description='Enable statistic outlier removal'),
+        DeclareLaunchArgument('sor_neighbors', default_value='50',
+                              description=''),
+        DeclareLaunchArgument('sor_stdev_mul', default_value='1.0',
+                              description=''),
+        DeclareLaunchArgument('dist_filter_enable', default_value='true',
+                              description='Enable custom distance thresholding'),
+        DeclareLaunchArgument('dist_stdev_mul', default_value='1.0',
+                              description=''),
 
         # LogInfo to display the parameters
         LogInfo(
@@ -57,6 +67,11 @@ def generate_launch_description():
                 {'show_live': LaunchConfiguration('show_live')},
                 {'num_threads': LaunchConfiguration('num_threads')},
                 {'grid_resolution': LaunchConfiguration('grid_resolution')},
+                {'sor_filter_enable': LaunchConfiguration('sor_filter_enable')},
+                {'sor_neighbors': LaunchConfiguration('sor_neighbors')},
+                {'sor_stdev_mul': LaunchConfiguration('sor_stdev_mul')},
+                {'dist_filter_enable': LaunchConfiguration('dist_filter_enable')},
+                {'dist_stdev_mul': LaunchConfiguration('dist_stdev_mul')},
             ],
             remappings=[],  # Add remappings if necessary
             arguments=[]    # Add additional arguments if necessary
