@@ -11,12 +11,24 @@ include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-include_directories(${OpenCV_INCLUDE_DIRS})
+include_directories(
+    ${PCL_INCLUDE_DIRS}
+    ${OpenCV_INCLUDE_DIRS}
+    ${pcl_conversions_INCLUDE_DIRS}
+)
 
-add_executable(ply_to_dem main.cpp)
+add_executable(ply_to_dem
+    main.cpp
+    mosaicing_tools.cpp
+    mosaicing_tools.h
+)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 include(CPack)
 
-target_link_libraries(ply_to_dem ${OpenCV_LIBS} ${PCL_LIBRARIES})
+target_link_libraries(ply_to_dem 
+    ${OpenCV_LIBS} 
+    ${PCL_LIBRARIES}
+    ${pcl_conversions_LIBRARIES}
+)

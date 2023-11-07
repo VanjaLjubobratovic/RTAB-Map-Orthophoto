@@ -3,8 +3,8 @@ source /opt/ros/humble/setup.bash
 
 LC_NUMERIC="en_US.UTF-8"; ros2 launch rtabmap_launch rtabmap.launch.py \
 rtabmap_args:="--delete_db_on_start" \
-rviz:=true \
-rtabmap_viz:=false \
+rviz:=false \
+rtabmap_viz:=true \
 frame_id:=camera_link \
 rgb_topic:=/camera/color/image_raw \
 depth_topic:=/camera/aligned_depth_to_color/image_raw \
