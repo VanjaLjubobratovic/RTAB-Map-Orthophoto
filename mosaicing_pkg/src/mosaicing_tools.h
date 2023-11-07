@@ -45,7 +45,8 @@ public:
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, 
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr output,
         int nNeighbors = 50,
-        float stdDevMulThresh = 1);
+        float stdDevMulThresh = 1,
+        int numThreads = 1);
 
     static void radiusFilter(
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, 

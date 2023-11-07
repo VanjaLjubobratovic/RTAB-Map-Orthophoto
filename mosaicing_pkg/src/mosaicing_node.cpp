@@ -138,7 +138,7 @@ private:
                         */
                        
                        std::vector<int> index;
-                       pcl::removeNaNFromPointCloud(*cloud, *cloud, index);
+                       //pcl::removeNaNFromPointCloud(*cloud, *cloud, index);
 
                        //Filtering outliers > X meters away from camera pose and with statistical filter
                        auto pose = poses.rbegin()->second;
@@ -154,7 +154,8 @@ private:
                         if(get_parameter("dist_filter_enable").as_bool())
                             MosaicingTools::statDistanceFilter(cloud, cloud, referencePoint, get_parameter("dist_stdev_mul").as_double());
                         if(get_parameter("sor_filter_enable").as_bool())
-                            MosaicingTools::filterCloud(cloud, cloud, get_parameter("sor_neighbors").as_int(), get_parameter("sor_stdev_mul").as_double());
+                            MosaicingTools::filterCloud(cloud, cloud, get_parameter("sor_neighbors").as_int(), get_parameter("sor_stdev_mul").as_double(),
+                                get_parameter("num_threads").as_int());
 
                         //adding clouds to processing queue
                         if(!cloud->empty()) {

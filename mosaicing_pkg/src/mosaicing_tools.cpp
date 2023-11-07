@@ -134,15 +134,13 @@ void MosaicingTools::sorThread(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, int
     sor.filter(*cloud);
 }
 
-void MosaicingTools::filterCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, pcl::PointCloud<pcl::PointXYZRGB>::Ptr output, int nNeighbors, float stdDevMulThresh) {
+void MosaicingTools::filterCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, pcl::PointCloud<pcl::PointXYZRGB>::Ptr output, int nNeighbors, float stdDevMulThresh, int numThreads) {
     pcl::StopWatch watch;
 
     if(input->empty()) {
         std::cerr << "Input empty, skipping..." << std::endl;
         return;
     }
-
-    int numParts = 8;
 
     std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> croppedParts;
 
@@ -151,10 +149,10 @@ void MosaicingTools::filterCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, p
 
     pcl::PointXYZRGB partSize;
     partSize.x = maxPt.x - minPt.x;
-    partSize.y = (maxPt.y - minPt.y) / numParts;
+    partSize.y = (maxPt.y - minPt.y) / numThreads;
     partSize.z = maxPt.z;
 
-    for(int i = 0; i < numParts; i++) {
+    for(int i = 0; i < numThreads; i++) {
         pcl::CropBox<pcl::PointXYZRGB> cropBoxFilter;
         cropBoxFilter.setInputCloud(input);
 
@@ -164,7 +162,7 @@ void MosaicingTools::filterCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, p
         partMin.z = minPt.z;
         
         partMax.x = maxPt.x;
-        partMax.y = (i == numParts - 1) ? maxPt.y : partMin.y + partSize.y;
+        partMax.y = (i == numThreads - 1) ? maxPt.y : partMin.y + partSize.y;
         partMax.z = maxPt.z;
 
         cropBoxFilter.setMin(partMin.getVector4fMap());
