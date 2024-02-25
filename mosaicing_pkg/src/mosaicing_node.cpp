@@ -31,11 +31,16 @@ public:
         declare_parameter<double>("cloud_min_depth", 0.0);
         declare_parameter<double>("cloud_max_depth", 0.0);
         declare_parameter<double>("cloud_voxel_size", 0.01);
-        declare_parameter<bool>("interpolate", true);
+        declare_parameter<bool>("interpolate", false);
         declare_parameter<std::string>("interpolation_method", "NN");
-        declare_parameter<bool>("show_live", false);
+        declare_parameter<bool>("show_live", true);
         declare_parameter<int>("num_threads", 1);
-        declare_parameter<double>("grid_resolution", 0.005);
+        declare_parameter<double>("grid_resolution", 0.01);
+        declare_parameter<bool>("sor_filter_enable", true);
+        declare_parameter<int>("sor_neighbors", 50);
+        declare_parameter<double>("sor_stdev_mul", 1.0);
+        declare_parameter<bool>("dist_filter_enable", true);
+        declare_parameter<double>("dist_stdev_mul", 1.0);
     }
 
 public:
@@ -133,7 +138,7 @@ private:
                         */
                        
                        std::vector<int> index;
-                       pcl::removeNaNFromPointCloud(*cloud, *cloud, index);
+                       //pcl::removeNaNFromPointCloud(*cloud, *cloud, index);
 
                        //Filtering outliers > X meters away from camera pose and with statistical filter
                        auto pose = poses.rbegin()->second;
@@ -146,9 +151,11 @@ private:
 								}
 
                         //Poses are given in "map" frame so filtering goes after transforming the cloud to "map" frame
-
-                        MosaicingTools::statDistanceFilter(cloud, cloud, referencePoint, 1.0);
-                        MosaicingTools::filterCloud(cloud, cloud, 50, 1.0);
+                        if(get_parameter("dist_filter_enable").as_bool())
+                            MosaicingTools::statDistanceFilter(cloud, cloud, referencePoint, get_parameter("dist_stdev_mul").as_double());
+                        if(get_parameter("sor_filter_enable").as_bool())
+                            MosaicingTools::filterCloud(cloud, cloud, get_parameter("sor_neighbors").as_int(), get_parameter("sor_stdev_mul").as_double(),
+                                get_parameter("num_threads").as_int());
 
                         //adding clouds to processing queue
                         if(!cloud->empty()) {
@@ -176,6 +183,9 @@ int main(int argc, char **argv) {
     rclcpp::NodeOptions options;
     auto node = std::make_shared<RTABMapPointCloudSubscriber>(options);
 
+    cv::namedWindow("LIVE MOSAIC", cv::WINDOW_GUI_EXPANDED);
+    cv::resizeWindow("LIVE MOSAIC", 800, 600);
+
     std::thread messageReceptionThread([&node] {
         rclcpp::spin(node);
     });
@@ -186,6 +196,8 @@ int main(int argc, char **argv) {
 
     messageReceptionThread.join();
     mosaicingThread.join();
+
+    cv::destroyWindow("LIVE MOSAIC");
 
     rclcpp::shutdown();
     return 0;

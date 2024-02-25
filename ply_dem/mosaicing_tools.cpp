@@ -171,9 +171,9 @@ void MosaicingTools::filterCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input, p
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr croppedCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
         cropBoxFilter.filter(*croppedCloud);
 
-        if(croppedCloud->empty() || croppedCloud->size() <= input->size() * 0.05) {
+        /*if(croppedCloud->empty() || croppedCloud->size() <= input->size() * 0.05) {
             continue;
-        }
+        }*/
             
 
         croppedParts.push_back(croppedCloud);
