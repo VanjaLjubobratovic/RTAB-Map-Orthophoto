@@ -7,7 +7,7 @@ The thesis written is in Croatian, but should translate pretty well into English
 
 
 Below you can see a short demonstration of the system in action.
-![onlineMosaicingDemo3(2)](https://github.com/user-attachments/assets/75f1ea16-c10e-451f-b1f8-43b8d5813cd4)
+![onlineMosaicingDemo3(2)(5)](https://github.com/user-attachments/assets/fe69b5e0-79bc-4259-b5cc-df040d5c291d)
 
 
 
